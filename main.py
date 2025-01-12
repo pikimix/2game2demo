@@ -63,9 +63,9 @@ pygame.init()
 pygame.display.set_mode((1280, 720))
 
 # set the clock
-clock = pygame.time.Clock()
+clock: pygame.time.Clock = pygame.time.Clock()
 running: bool = True
-dt = 0
+dt: int = 0
 
 while running:
     # poll for events
