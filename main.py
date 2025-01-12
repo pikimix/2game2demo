@@ -5,7 +5,7 @@ import signal
 import types
 import argparse
 import logging
-import pygame
+import pygame as pg
 
 def signal_handler(sig: int, frame: types.FrameType) -> None:
     """
@@ -38,7 +38,7 @@ def signal_handler(sig: int, frame: types.FrameType) -> None:
     if sig == signal.SIGINT:
         logger.debug('signal_handler: %s | %s', sig, frame)
         logger.info('signal_handler: Caught sigint, gracefully exiting.')
-        pygame.quit()
+        pg.quit()
         raise SystemExit
 
 # parse arguments passed when started
@@ -58,24 +58,24 @@ logger.info(' Log Level=%s', logging.getLevelName(logger.getEffectiveLevel()))
 
 signal.signal(signal.SIGINT, signal_handler)
 
-# pygame setup
-pygame.init()
-pygame.display.set_mode((1280, 720))
+# pg setup
+pg.init()
+pg.display.set_mode((1280, 720))
 
 # set the clock
-clock: pygame.time.Clock = pygame.time.Clock()
+clock: pg.time.Clock = pg.time.Clock()
 running: bool = True
 dt: int = 0
 
 while running:
     # poll for events
-    # pygame.QUIT event means the user clicked X to close your window
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+    # pg.QUIT event means the user clicked X to close your window
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
             running = False
 
     # flip() the display to put your work on screen
-    pygame.display.flip()
+    pg.display.flip()
 
     # limits FPS to 60
     # dt is delta time in seconds since last frame, used for framerate-
