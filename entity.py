@@ -1,7 +1,11 @@
 """ Collection of entitys that exist within the gamespace
 """
+import logging
 import pygame as pg
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=0)
+logger.error('Starting')
 class Entity(pg.sprite.DirtySprite):
     """Basic entity that gets drawn to screen
     """
@@ -17,33 +21,56 @@ class Entity(pg.sprite.DirtySprite):
             details of the sprite to be drawn
         """
         super().__init__()
+        #####
+        # Set up the sprite
         self.dirty = 2
         self.visible = 1
         self.last_frame = 0
         self.frame_interval = 100
         radius = 10
+        # Default to no sprite, render a cirle
         self.image = pg.Surface((20, 20), pg.SRCALPHA)# pylint: disable=no-member
         pg.draw.circle(self.image, (255,255,255,255), (radius,radius), radius=radius, width=0)
         self.rect = pg.Rect(origin[0],origin[1], radius*2, radius*2)
         self.source_rect = pg.Rect(0,0,radius*2, radius*2)
         self.rect = pg.Rect(origin[0], origin[1], radius*2, radius*2)
+        # If there was sprite details passed, load the sprite
         if sprite_details:
-            self.image = pg.image.load(sprite_details['file']).convert_alpha()
-            self.source_rect = pg.Rect(0, 0,
-                                        sprite_details['width'], sprite_details['height'])
-            self.rect = pg.Rect(origin[0], origin[1],
-                                    sprite_details['width'], sprite_details['height'])
+            self.load_sprite(sprite_details)
+
         self.src_image = self.image
+        # End setting up sprite
+        #####
+
+        #####
+        # Movement
+        self.velocity = pg.Vector2(0,0)
+        #
+        #####
+
+    def load_sprite(self, sprite_details: dict[str,str|int]):
+        """Load a sprite from a file
+
+        Parameters
+        ----------
+        sprite_details : dict[str,str | int]
+            details of the sprite to be loaded
+        """
+        self.image = pg.image.load(sprite_details['file']).convert_alpha()
+        self.source_rect = pg.Rect(0, 0,
+                                    sprite_details['width'], sprite_details['height'])
+        self.rect = pg.Rect(self.rect.x, self.rect.y,
+                                sprite_details['width'], sprite_details['height'])
 
     def update(self):
         """Update the current entity's animation frame
         """
-        if pg.time.get_ticks() > self.last_frame + self.frame_interval:
+        if (pg.time.get_ticks() > self.last_frame + self.frame_interval
+            and self.source_rect.width < self.image.get_width()):
             self.source_rect.x += self.source_rect.width
             if self.source_rect.x >= self.image.get_width():
                 self.source_rect.x = 0
             self.last_frame = pg.time.get_ticks()
-            print(pg.time.get_ticks())
 
     def tint(self, color: pg.color.Color):# pylint: disable=c-extension-no-member
         """Tints a copy of the original image, and stores this as image for drawing
