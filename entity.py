@@ -84,3 +84,48 @@ class Entity(pg.sprite.DirtySprite):
         if color:
             tinted.fill(color,None,pg.BLEND_RGBA_MIN)# pylint: disable=no-member
         self.image = tinted.copy()
+
+class Player(Entity):
+    """A locally controllable player extension to the entity class
+    """
+
+    def update(self, bounds: pg.Rect=None):
+        """Update the player movement, before passing to the parent class to update animation
+
+        Parameters
+        ----------
+        bounds : pg.Rect
+            Bounds that the player must remain within
+        """
+        # Get keys pressed
+        keys = pg.key.get_pressed()
+
+        # We are using target velocity before applying to self.velocity 
+        # so that we can normalise/ set magnitude easier.
+        target_velocity = pg.Vector2(0, 0)
+        # Depending on the keys pressed, change the target velocity
+        if keys[pg.K_w]:# pylint: disable=no-member
+            target_velocity.y += -1
+        if keys[pg.K_s]:# pylint: disable=no-member
+            target_velocity.y += 1
+        if keys[pg.K_a]:# pylint: disable=no-member
+            target_velocity.x += -1
+        if keys[pg.K_d]:# pylint: disable=no-member
+            target_velocity.x += 1
+
+        # If the magnatute of the velocity is > 0, we need to move
+        if target_velocity.length() > 0:
+            self.velocity = target_velocity.normalize() * 10
+            self.rect.move_ip(self.velocity)
+            if bounds and not bounds.contains(self.rect):
+                if self.rect.left < bounds.left:
+                    self.rect.left = bounds.left
+                elif self.rect.right > bounds.right:
+                    self.rect.right = bounds.right
+                if self.rect.top < bounds.top:
+                    self.rect.top = bounds.top
+                elif self.rect.bottom > bounds.bottom:
+                    self.rect.bottom = bounds.bottom
+
+        # Update the parent sprite class to update animation
+        super().update()
