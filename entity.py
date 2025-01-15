@@ -45,6 +45,7 @@ class Entity(pg.sprite.DirtySprite):
         #####
         # Movement
         self.velocity = pg.Vector2(0,0)
+        self.max_velocity = 10
         #
         #####
 
@@ -72,6 +73,23 @@ class Entity(pg.sprite.DirtySprite):
                 self.source_rect.x = 0
             self.last_frame = pg.time.get_ticks()
 
+    def move_towards(self, target: pg.Vector2):
+        """
+        Sets velocity to move the object towards a target position.
+
+        This method calculates the vector from the object's current rect (center) 
+        to the target position, normalizes this vector, and then sets the object's velocity 
+        to move towards the target at a constant maximum velocity.
+
+        Parameters
+        ----------
+        target : pg.Vector2
+            The target position towards which the object will move.
+        """
+        target_velocity = target - pg.Vector2(self.rect.center)
+        if target_velocity.length() != 0:
+            self.velocity = target_velocity.normalize() * self.max_velocity
+
     def tint(self, color: pg.color.Color):# pylint: disable=c-extension-no-member
         """Tints a copy of the original image, and stores this as image for drawing
 
@@ -88,6 +106,10 @@ class Entity(pg.sprite.DirtySprite):
 class Player(Entity):
     """A locally controllable player extension to the entity class
     """
+    def __init__(self, origin, sprite_details):
+        super().__init__(origin, sprite_details)
+        self.click_move: bool = False
+        self.click_target: pg.Vector2 = None
 
     def update(self, bounds: pg.Rect=None):
         """Update the player movement, before passing to the parent class to update animation
@@ -100,8 +122,18 @@ class Player(Entity):
         # Get keys pressed
         keys = pg.key.get_pressed()
 
-        # We are using target velocity before applying to self.velocity 
-        # so that we can normalise/ set magnitude easier.
+        # First check if the player has clicked a location
+        mouse = pg.mouse.get_pressed(num_buttons=3)
+        if mouse[0]:
+            # If a location has been clicked, set click move to true and the click location
+            # from the mouse potision so that this persists to the next frame
+            mouse_pos = pg.mouse.get_pos()
+            self.click_target = pg.Vector2(mouse_pos)
+            self.click_move = True
+
+        # After that, create a new target veloicty and check for keyboard input
+        # We have a separate target velocity so that we can do some normalisation if
+        # keyboard movement is used
         target_velocity = pg.Vector2(0, 0)
         # Depending on the keys pressed, change the target velocity
         if keys[pg.K_w]:# pylint: disable=no-member
@@ -115,17 +147,32 @@ class Player(Entity):
 
         # If the magnatute of the velocity is > 0, we need to move
         if target_velocity.length() > 0:
-            self.velocity = target_velocity.normalize() * 10
+            self.click_move = False
+            self.velocity = target_velocity.normalize() * self.max_velocity
             self.rect.move_ip(self.velocity)
-            if bounds and not bounds.contains(self.rect):
-                if self.rect.left < bounds.left:
-                    self.rect.left = bounds.left
-                elif self.rect.right > bounds.right:
-                    self.rect.right = bounds.right
-                if self.rect.top < bounds.top:
-                    self.rect.top = bounds.top
-                elif self.rect.bottom > bounds.bottom:
-                    self.rect.bottom = bounds.bottom
+        # Keyboard takes priority, but check after if mouse movement has been used
+        elif self.click_move:
+            # Set velocity to move to click location
+            self.move_towards(self.click_target)
+            if not self.velocity:
+                self.click_move = False
+            # Stop if we are "close enough" to the click location, but it is non 0
+            # Possibly move this into the move_towards method
+            elif self.click_target.distance_to(self.rect.center) < 10:
+                self.click_move = False
+            # if we haven't stopped, move
+            else:
+                self.rect.move_ip(self.velocity)
+        # Make sure we stay in bouds, if we have bounds set.
+        if bounds and not bounds.contains(self.rect):
+            if self.rect.left < bounds.left:
+                self.rect.left = bounds.left
+            elif self.rect.right > bounds.right:
+                self.rect.right = bounds.right
+            if self.rect.top < bounds.top:
+                self.rect.top = bounds.top
+            elif self.rect.bottom > bounds.bottom:
+                self.rect.bottom = bounds.bottom
 
         # Update the parent sprite class to update animation
         super().update()
