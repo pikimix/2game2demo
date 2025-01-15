@@ -6,39 +6,27 @@ import types
 import argparse
 import logging
 import pygame as pg
+from scene import Scene
 
 def signal_handler(sig: int, frame: types.FrameType) -> None:
     """
     Handle SIGINT signal and exit gracefully.
 
-    This function handles the SIGINT signal (typically triggered by a 
-    Ctrl+C action), logs debug and info messages, quits the pygame 
-    library, and raises a SystemExit exception to terminate the program.
+    This function handles the signal processing, logs debug and info messages,
+    quits the pygame, and raises a SystemExit exception to terminate the
+    program.
 
-    Args:
-        sig : int
-            The signal number that was received.
-        frame : types.FrameType 
-            The current stack frame when the signal  was received.
-
-    Logs:
-        - Debug level log containing the signal and frame details.
-        - Info level log indicating the reception of SIGINT and the graceful exit process.
-
-    Actions:
-        - If SIGINT is received, logs the details and exits the program:
-            - Calls logger.debug() to log signal and stack frame details.
-            - Calls logger.info() to log the graceful exit message.
-            - Calls pygame.quit() to cleanly quit the pygame library.
-            - Raises a SystemExit exception to terminate the program.
-
-    Example:
-        signal_handler(signal.SIGINT, frame)
+    Parameters
+    ----------
+    sig : int
+        The signal number that was received.
+    frame : types.FrameType
+        The current stack frame when the signal was received.
     """
     if sig == signal.SIGINT:
         logger.debug('signal_handler: %s | %s', sig, frame)
         logger.info('signal_handler: Caught sigint, gracefully exiting.')
-        pg.quit()
+        pg.quit()# pylint: disable=no-member
         raise SystemExit
 
 # parse arguments passed when started
@@ -59,21 +47,26 @@ logger.info(' Log Level=%s', logging.getLevelName(logger.getEffectiveLevel()))
 signal.signal(signal.SIGINT, signal_handler)
 
 # pg setup
-pg.init()
-pg.display.set_mode((1280, 720))
+pg.init()# pylint: disable=no-member
+_screen = pg.display.set_mode((1280, 720))
 
 # set the clock
 clock: pg.time.Clock = pg.time.Clock()
 running: bool = True
 dt: int = 0
 
+scene = Scene(_screen.get_rect())
+
 while running:
     # poll for events
     # pg.QUIT event means the user clicked X to close your window
     for event in pg.event.get():
-        if event.type == pg.QUIT:
+        if event.type == pg.QUIT:# pylint: disable=no-member
             running = False
+    _screen.fill("forestgreen")
 
+    scene.update()
+    scene.draw(_screen)
     # flip() the display to put your work on screen
     pg.display.flip()
 
