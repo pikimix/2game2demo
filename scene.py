@@ -1,8 +1,10 @@
 """A scene which controls the entity state
 """
 import logging
+import random
 import pygame as pg
-import entity
+from pygame.sprite import Group, GroupSingle, LayeredDirty
+from entity import Enemy, Player
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=0)
@@ -18,16 +20,19 @@ class Scene:
             'height': 32,
             'frames': 4
         }
-        psprite = entity.Player((128,128), sprite)
-        self.player = pg.sprite.GroupSingle(psprite)
-        self.all_sprites = pg.sprite.LayeredDirty()
-        self.all_sprites.add(self.player, layer=2)
-        self.enemies = pg.sprite.Group()
-        for e in range(4):
-            self.enemies.add(entity.Entity((128*e,128), sprite))
+        psprite = Player((128,128), sprite)
+        self.player: GroupSingle[Player] = GroupSingle(psprite)
+        self.all_sprites: LayeredDirty[Enemy|Player] = LayeredDirty()
+        self.enemies: Group[Enemy] = Group()
+        for _ in range(4):
+            loc = (random.randint(0,1200), random.randint(0,700))
+            enemy = Enemy(loc, sprite)
+            enemy.move_towards(pg.Vector2(self.player.sprites()[0].rect.center))
+            self.enemies.add(enemy)
         for enemy in self.enemies:
             enemy.tint('Red')
         self.all_sprites.add(self.enemies, layer=1)
+        self.all_sprites.add(self.player, layer=2)
 
     def update(self, bounds: pg.Rect):
         """Update the current scene
