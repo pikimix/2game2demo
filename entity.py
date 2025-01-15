@@ -189,3 +189,52 @@ class Player(Entity):
 
         # Update the parent sprite class to update animation
         super().update()
+
+class Enemy(Entity):
+    """Basic enemy class, may be more complex ones later, or may just add behaviours to this.
+    """
+    def __init__(self, origin: tuple[int, int], sprite_details: dict[str,str|int]|None,
+                    behaviour: int|str|None=None, velocity: pg.Vector2=pg.Vector2(0,0)):
+        """Create a basic Enemy class, with basic behaviours
+
+        Parameters
+        ----------
+        origin : tuple[int, int]
+            location where the entity gets spwaned
+        sprite_details : dict[str,str | int]
+            details of the sprite to be drawn
+        behaviour : int | str | None, optional
+            Behaviour enemy will exhibit, by default None, TYPE MAY CHANGE IN FUTURE
+        velocity : pg.Vector2, optional
+            default velocity of the enemy, in case it is a dumb "move this way" type
+            by default pg.Vector2(0,0)
+        """
+        super().__init__(origin, sprite_details)
+        self.behaviour = behaviour
+        self.velocity = velocity
+        self.has_been_onscreen = False
+
+    def respawn(self, origin: tuple[int, int]):
+        """Respawn the entity at a new location.
+
+        This will also reset the state of the entity to its default.
+
+        Parameters
+        ----------
+        origin : tuple[int, int]
+            Location to spawn in at.
+        """
+        super().respawn(origin)
+        self.has_been_onscreen = False
+
+    def update(self):
+        """Update the enemy, before passing to the parent class to update animation
+        """
+        if self.behaviour:
+            self.action()
+        self.rect.move_ip(self.velocity)
+        return super().update()
+
+    def action(self):
+        """Perform actions based on self.behaviour
+        """
