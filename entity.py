@@ -5,7 +5,7 @@ import pygame as pg
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=0)
-logger.error('Starting')
+
 class Entity(pg.sprite.DirtySprite):
     """Basic entity that gets drawn to screen
     """
@@ -62,6 +62,19 @@ class Entity(pg.sprite.DirtySprite):
                                     sprite_details['width'], sprite_details['height'])
         self.rect = pg.Rect(self.rect.x, self.rect.y,
                                 sprite_details['width'], sprite_details['height'])
+
+    def respawn(self, origin: tuple[int, int]):
+        """Respawn the entity at a new location.
+
+        This will also reset the state of the entity to its default.
+
+        Parameters
+        ----------
+        origin : tuple[int, int]
+            Location to spawn in at.
+        """
+        self.source_rect.topleft = (0,0)
+        self.rect.topleft = origin
 
     def update(self):
         """Update the current entity's animation frame
