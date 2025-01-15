@@ -65,7 +65,7 @@ while running:
             running = False
     _screen.fill("forestgreen")
 
-    scene.update()
+    scene.update(dt)
     scene.draw(_screen)
     # flip() the display to put your work on screen
     pg.display.flip()

@@ -61,13 +61,19 @@ class Scene:
             offset[1] += self.bounds.height
         return tuple(offset)
 
-    def update(self):
+    def update(self, dt:float):
         """Update the current scene
+
+        Parameters
+        ----------
+        dt : float
+            deltatime - time since last update
         """
-        self.player.update(self.bounds)
+        self.player.update(self.bounds, dt)
+
 
         for e in self.enemies:
-            e.update()
+            e.update(dt)
             if not self.bounds.contains(e.rect):
                 if e.has_been_onscreen:
                     e.kill()
@@ -83,6 +89,10 @@ class Scene:
                 d.move_towards(self.player.sprites()[0].rect.center)
                 d.add(self.enemies)
                 self.all_sprites.add(d, layer=1)
+
+        collisions = pg.sprite.spritecollide(self.player.sprite, self.enemies, False)
+        for collide in collisions:
+            self.player.sprite.gain_innertia(pg.Vector2(collide.rect.center))
 
     def draw(self, screen: pg.Surface):
         """Draw the current scene to the provided screen

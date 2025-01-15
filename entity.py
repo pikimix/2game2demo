@@ -45,7 +45,9 @@ class Entity(pg.sprite.DirtySprite):
         #####
         # Movement
         self.velocity = pg.Vector2(0,0)
-        self.max_velocity = 10
+        self.max_velocity = 500
+        self.innertia_vector = pg.Vector2(0,0)
+        self.innertia_scaler = 0
         #
         #####
 
@@ -75,6 +77,23 @@ class Entity(pg.sprite.DirtySprite):
         """
         self.source_rect.topleft = (0,0)
         self.rect.topleft = origin
+
+    def gain_innertia(self, innertia: pg.Vector2, scaler: int=1.5):
+        """Replace current innertia with provided vector and scaler
+
+        Parameters
+        ----------
+        innertia : pg.Vector2, optional
+            Vector direction of the new innertia
+        scaler : int, optional
+            Scaler to apply to the direction, default 2
+        """
+        if innertia:
+            logger.debug('self.innertia_vector=%s', self.innertia_vector)
+            self.innertia_vector = pg.Vector2(self.rect.center) - innertia
+            self.innertia_vector.normalize_ip()
+            self.innertia_scaler =  innertia.length() * scaler
+            logger.debug('self.innertia_scaler=%s innertia.length()=%s', self.innertia_scaler, innertia.length())
 
     def update(self):
         """Update the current entity's animation frame
@@ -124,13 +143,26 @@ class Player(Entity):
         self.click_move: bool = False
         self.click_target: pg.Vector2 = None
 
-    def update(self, bounds: pg.Rect=None):
+    def update(self, bounds: pg.Rect=None, dt: float=None):
         """Update the player movement, before passing to the parent class to update animation
 
         Parameters
         ----------
         bounds : pg.Rect
-            Bounds that the player must remain within
+            Bounds that the player must remain within, by default None
+        """
+
+        if self.innertia_scaler > 0:
+            inertia = self.innertia_vector * self.innertia_scaler
+            self.rect.move_ip(inertia * dt)
+            self.innertia_scaler -= self.max_velocity * 8 * dt
+        else:
+            self.handle_input(dt)
+        if bounds:
+            self.bounds_check(bounds)
+
+    def handle_input(self, dt: float):
+        """Handle input and move
         """
         # Get keys pressed
         keys = pg.key.get_pressed()
@@ -162,7 +194,7 @@ class Player(Entity):
         if target_velocity.length() > 0:
             self.click_move = False
             self.velocity = target_velocity.normalize() * self.max_velocity
-            self.rect.move_ip(self.velocity)
+            self.rect.move_ip(self.velocity * dt)
         # Keyboard takes priority, but check after if mouse movement has been used
         elif self.click_move:
             # Set velocity to move to click location
@@ -175,9 +207,18 @@ class Player(Entity):
                 self.click_move = False
             # if we haven't stopped, move
             else:
-                self.rect.move_ip(self.velocity)
-        # Make sure we stay in bouds, if we have bounds set.
-        if bounds and not bounds.contains(self.rect):
+                self.rect.move_ip(self.velocity * dt)
+
+    def bounds_check(self, bounds: pg.Rect):
+        """Ensure the player is still within bounds
+
+        Parameters
+        ----------
+        bounds : pg.Rect, optional
+            Bounds that the player must remain within
+        """
+        # Make sure we stay in bounds, if we have bounds set.
+        if not bounds.contains(self.rect):
             if self.rect.left < bounds.left:
                 self.rect.left = bounds.left
             elif self.rect.right > bounds.right:
@@ -227,12 +268,12 @@ class Enemy(Entity):
         super().respawn(origin)
         self.has_been_onscreen = False
 
-    def update(self):
+    def update(self, dt: float=None):
         """Update the enemy, before passing to the parent class to update animation
         """
         if self.behaviour:
             self.action()
-        self.rect.move_ip(self.velocity)
+        self.rect.move_ip(self.velocity * dt)
         return super().update()
 
     def action(self):
