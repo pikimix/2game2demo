@@ -2,6 +2,7 @@
 """
 import logging
 import pygame as pg
+from particle import Particle
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=0)
@@ -89,11 +90,11 @@ class Entity(pg.sprite.DirtySprite):
             Scaler to apply to the direction, default 2
         """
         if innertia:
-            logger.debug('self.innertia_vector=%s', self.innertia_vector)
+            # logger.debug('self.innertia_vector=%s', self.innertia_vector)
             self.innertia_vector = pg.Vector2(self.rect.center) - innertia
             self.innertia_vector.normalize_ip()
             self.innertia_scaler =  innertia.length() * scaler
-            logger.debug('self.innertia_scaler=%s innertia.length()=%s', self.innertia_scaler, innertia.length())
+            # logger.debug('self.innertia_scaler=%s innertia.length()=%s', self.innertia_scaler, innertia.length())
 
     def update(self):
         """Update the current entity's animation frame
@@ -157,6 +158,25 @@ class Player(Entity):
         super().__init__(origin, sprite_details)
         self.click_move: bool = False
         self.click_target: pg.Vector2 = None
+        self.particles: list[Particle] = []
+        self.last_attack: int = 0
+        self.attack_interval = 100
+
+    def attack(self, target: pg.Vector2, ticks: int):
+        """Create a new particle for the players "Attack"
+
+        Parameters
+        ----------
+        target : pg.Vector2
+            target to fire att
+        ticks : int
+            global tick count at the start of the frame update for tracking attack times
+        """
+        self.last_attack = ticks
+        direction = target - pg.Vector2(self.rect.center)
+        direction.normalize_ip()
+        direction *= 600
+        self.particles.append(Particle(pg.Rect(self.rect), direction, 'Yellow', 1000))
 
     def update(self, bounds: pg.Rect=None, dt: float=None):
         """Update the player movement, before passing to the parent class to update animation
@@ -165,14 +185,21 @@ class Player(Entity):
         ----------
         bounds : pg.Rect
             Bounds that the player must remain within, by default None
+        dt : float
+            time since last frame for velocity scaling maths
         """
-
         if self.innertia_scaler > 0:
             inertia = self.innertia_vector * self.innertia_scaler
             self.rect.move_ip(inertia * dt)
             self.innertia_scaler -= self.max_velocity * 8 * dt
         else:
             self.handle_input(dt)
+
+        # Update then cull particles
+        for p in self.particles:
+            p.update(dt)
+        self.particles = [p for p in self.particles if not p.has_expired]
+
         if bounds:
             self.bounds_check(bounds)
 
