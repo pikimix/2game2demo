@@ -179,8 +179,30 @@ class Scene:
             deltatime - time since last update
         """
         ticks = pg.time.get_ticks()
-        self.player.update(self.bounds, dt)
 
+        # Check if the player needs to attack, then fire one off if there are enemies
+        if self.player.sprite.last_attack + self.player.sprite.attack_interval < ticks:
+            enemy = None
+            if len(self.enemies) > 1:
+                enemy = min([e for e in self.enemies.sprites()],
+                key=lambda e: pow(e.rect.x-self.player.sprite.rect.x, 2)
+                            + pow(e.rect.y-self.player.sprite.rect.y, 2))
+            elif len(self.enemies) == 1:
+                enemy = self.enemies.sprites()[0]
+            if enemy is not None:
+                self.player.sprite.attack(pg.Vector2(enemy.rect.center),ticks)
+
+        # Check if any of our attacks hit, kill enmies that are hit, 
+        # and remove the particle that killed them
+        for p in self.player.sprite.particles:
+            killed = pg.sprite.spritecollide(p, self.enemies,False)
+            if len(killed) > 1:
+                p.has_expired = True
+            for k in killed:
+                k.kill()
+                self.dead_sprites.add(k)
+
+        self.player.update(self.bounds, dt)
 
         for e in self.enemies:
             e.update(dt)
@@ -248,7 +270,7 @@ class Scene:
                 self.all_sprites.add(d, layer=1)
                 if len(spawned) >= pattern.number_of_enemies:
                     break
-        logger.debug(spawned)
+        # logger.debug(spawned)
 
     def draw(self, screen: pg.Surface):
         """Draw the current scene to the provided screen
@@ -259,3 +281,5 @@ class Scene:
             SCreen or surface to draw the scene too.
         """
         self.all_sprites.draw(screen)
+        for p in self.player.sprite.particles:
+            p.draw(screen)
