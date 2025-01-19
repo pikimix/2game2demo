@@ -14,8 +14,9 @@ class EnemyPattern:
     """Class that holds details about an enemy pattern used by a Scene
     """
     def __init__(self, number_of_enemies: int, spawn_type: str,
-                    enemy_behaviour: int|str|None=None, 
-                    has_leader: bool=False,  distance: int=25):
+                    enemy_behaviour: int|str|None=None,
+                    has_leader: bool=False,  distance: int=25,
+                    target: pg.Vector2|None=None, target_direction: pg.Vector2=None):
         """Create a new enemy pattern
 
         Parameters
@@ -28,15 +29,31 @@ class EnemyPattern:
             behavioru of enemies in the pattern, by default None
         has_leader : bool, optional
             if the pattern has a leader, by default False
-        spawn_type: int
+        distance : int, optional
             Distance to leave between enemies when spawning
             only takes affect when paired with has_leader
+        target : pg.Vector2, optional
+            Target location for spawned object to move towards, leave as None to target player
+            by default None, cannot be used with target_direction
+        target_direction : pg.Vector2, optional
+            Normalised unit vector indicating the direction spawned enemies should move.
+            by default None, cannot be used with target
+
+        Raises
+        ------
+        ValueError
+            When trying to set both target and target_direction as they are mutually exclusive.
         """
         self.number_of_enemies = number_of_enemies
         self.enemy_behaviour = enemy_behaviour
         self.has_leader = has_leader
         self.distance = distance
         self.spawn_type = spawn_type if spawn_type in ['top', 'left', 'right', 'bottom'] else 'any'
+        self.target = target
+        self.target_direction = target_direction
+        if target and target_direction:
+            raise ValueError('Cannot set both target and target_direction')
+
 
 class Scene:
     """A scene (or "level") of the game
@@ -72,11 +89,13 @@ class Scene:
                                 EnemyPattern(1, 'any'),
                                 EnemyPattern(20, 'left', has_leader=True),
                                 EnemyPattern(20, 'bottom', has_leader=True, distance=200),
-                                EnemyPattern(20, 'top', has_leader=True, distance=200),
+                                EnemyPattern(20, 'top', has_leader=True, distance=200,
+                                                target_direction=pg.Vector2(0,1)),
                                 EnemyPattern(20, 'right', has_leader=True, distance=50),
-                                EnemyPattern(20, 'right', has_leader=True),
-                                EnemyPattern(200, 'top'),
-                                EnemyPattern(200, 'bottom')
+                                EnemyPattern(20, 'right', has_leader=True,
+                                                target_direction=pg.Vector2(1,0)),
+                                EnemyPattern(200, 'top', target=self.bounds.center),
+                                EnemyPattern(200, 'bottom',target=self.bounds.center)
         ]
         self.last_spawn = 0
         self.spaw_timeout = 1000
@@ -199,7 +218,12 @@ class Scene:
                             pattern.spawn_type = random.choice(['top', 'left', 'right', 'bottom'])
                         spawn = self.spawn_outside(pattern.spawn_type)
                         d.respawn(spawn)
-                        d.move_towards(self.player.sprites()[0].rect.center)
+                        if pattern.target_direction:
+                            d.set_direction(pattern.target_direction)
+                        elif pattern.target:
+                            d.move_towards(pattern.target)
+                        else:
+                            d.move_towards(self.player.sprites()[0].rect.center)
                         setattr(pattern, "leader_pos", spawn)
                         setattr(pattern, "leader_vel", d.velocity)
                     else:
@@ -213,7 +237,12 @@ class Scene:
                         d.velocity = pattern.leader_vel
                 else:
                     d.respawn(self.spawn_outside(pattern.spawn_type))
-                    d.move_towards(self.player.sprites()[0].rect.center)
+                    if pattern.target_direction:
+                        d.set_direction(pattern.target_direction)
+                    elif pattern.target:
+                        d.move_towards(pattern.target)
+                    else:
+                        d.move_towards(self.player.sprites()[0].rect.center)
                 spawned.append(d.rect)
                 d.add(self.enemies)
                 self.all_sprites.add(d, layer=1)
