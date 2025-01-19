@@ -122,6 +122,21 @@ class Entity(pg.sprite.DirtySprite):
         if target_velocity.length() != 0:
             self.velocity = target_velocity.normalize() * self.max_velocity
 
+    def set_direction(self, direction: pg.Vector2):
+        """
+        Sets velocity to move the object in a specific direction.
+
+        This method takes in a unit vector (which we normalize to be sure) and then multiply this
+        based on the maximum velocity.
+
+        Parameters
+        ----------
+        direction : pg.Vector2
+            The unit vector representing the direction we want to move in.
+        """
+        if direction.length() != 0:
+            self.velocity = direction.normalize() * self.max_velocity
+
     def tint(self, color: pg.color.Color):# pylint: disable=c-extension-no-member
         """Tints a copy of the original image, and stores this as image for drawing
 
