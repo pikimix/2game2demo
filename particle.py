@@ -31,12 +31,12 @@ class Particle:
         self.spawn_time = pg.time.get_ticks()
         self.lifetime = lifetime
 
-    def update(self, dt:int):
+    def update(self, dt:float):
         """Update the particles position, and check if its lifetime has expired
 
         Parameters
         ----------
-        dt : int
+        dt : float
             Time that has elapsed since the last frame
         """
         if self.spawn_time + self.lifetime < pg.time.get_ticks():
