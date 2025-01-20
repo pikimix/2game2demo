@@ -3,6 +3,8 @@
 import logging
 import pygame as pg
 from particle import Particle
+from ability import BaseAttack
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=0)
@@ -160,7 +162,7 @@ class Player(Entity):
         self.click_target: pg.Vector2 = None
         self.particles: list[Particle] = []
         self.last_attack: int = 0
-        self.attack_interval = 100
+        self.attacks = BaseAttack()
 
     def attack(self, target: pg.Vector2, ticks: int):
         """Create a new particle for the players "Attack"
@@ -173,10 +175,12 @@ class Player(Entity):
             global tick count at the start of the frame update for tracking attack times
         """
         self.last_attack = ticks
-        direction = target - pg.Vector2(self.rect.center)
-        direction.normalize_ip()
-        direction *= 600
-        self.particles.append(Particle(pg.Rect(self.rect), direction, 'Yellow', 1000))
+        direction = (target - pg.Vector2(self.rect.center)).normalize()
+        direction *= self.attacks.particle['max_vel']
+        self.particles.append(Particle(pg.Rect(self.rect),
+                                        direction,
+                                        self.attacks.particle['color'],
+                                        self.attacks.particle['lifetime']))
 
     def update(self, bounds: pg.Rect=None, dt: float=None):
         """Update the player movement, before passing to the parent class to update animation

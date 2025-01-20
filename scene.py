@@ -181,7 +181,7 @@ class Scene:
         ticks = pg.time.get_ticks()
 
         # Check if the player needs to attack, then fire one off if there are enemies
-        if self.player.sprite.last_attack + self.player.sprite.attack_interval < ticks:
+        if self.player.sprite.last_attack + self.player.sprite.attacks.interval < ticks:
             enemy = None
             if len(self.enemies) > 1:
                 enemy = min([e for e in self.enemies.sprites()],
