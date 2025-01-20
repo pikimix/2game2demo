@@ -4,7 +4,7 @@ from __future__ import annotations # To make type hinting work when using classe
 import logging
 import random
 import pygame as pg
-from pygame.sprite import Group, GroupSingle, LayeredDirty
+from pygame.sprite import Group, LayeredDirty
 from entity import Enemy, Player
 
 logger = logging.getLogger(__name__)
@@ -68,8 +68,7 @@ class Scene:
             'height': 32,
             'frames': 4
         }
-        psprite = Player(bounds.center, sprite)
-        self.player: GroupSingle[Player] = GroupSingle(psprite)
+        self.player: Player = Player(bounds.center, sprite)
         self.all_sprites: LayeredDirty[Enemy|Player] = LayeredDirty()
         self.enemies: Group[Enemy] = Group()
         self.dead_sprites: Group = Group()
@@ -77,7 +76,7 @@ class Scene:
         # Create enemies for use later
         for _ in range(2001):
             enemy = Enemy(self.spawn_outside(), sprite)
-            enemy.move_towards(pg.Vector2(self.player.sprite.rect.center))
+            enemy.move_towards(pg.Vector2(self.player.rect.center))
             self.dead_sprites.add(enemy)
         # Make all the enemies red
         for enemy in self.dead_sprites:
@@ -180,31 +179,44 @@ class Scene:
         """
         ticks = pg.time.get_ticks()
 
-        # Check if the player needs to attack, then fire one off if there are enemies
-        if self.player.sprite.last_attack + self.player.sprite.attacks.interval < ticks:
-            enemy = None
-            if len(self.enemies) > 1:
-                enemy = min([e for e in self.enemies.sprites()],
-                key=lambda e: pow(e.rect.x-self.player.sprite.rect.x, 2)
-                            + pow(e.rect.y-self.player.sprite.rect.y, 2))
-            elif len(self.enemies) == 1:
-                enemy = self.enemies.sprite
-            if enemy is not None:
-                self.player.sprite.attack(pg.Vector2(enemy.rect.center),ticks)
+        if self.player.alive():
+            # Check if the player needs to attack, then fire one off if there are enemies
+            if self.player.last_attack + self.player.attacks.interval < ticks:
+                enemy = None
+                if len(self.enemies) > 1:
+                    enemy = min([e for e in self.enemies.sprites()],
+                                key=lambda e: pow(e.rect.x-self.player.rect.x, 2)
+                                            + pow(e.rect.y-self.player.rect.y, 2))
+                elif len(self.enemies) == 1:
+                    enemy = self.enemies.sprites()[0]
+                if enemy is not None:
+                    self.player.attack(pg.Vector2(enemy.rect.center), ticks)
+
+            self.player.update(self.bounds, dt)
+
+        else:
+            # if the player is not alive, we need to make sure their particles are updated/ culled
+            for p in self.player.particles:
+                p.update(dt)
+            self.player.particles = [p
+                                            for p in self.player.particles 
+                                            if not p.has_expired]
+            keys = pg.key.get_pressed()
+            if keys[pg.K_SPACE]:
+                self.player.respawn(self.bounds.center)
+                self.player.add(self.all_sprites)
 
         # Check if any of our attacks hit, kill enmies that are hit,
         # and remove the particle that killed them
-        for p in self.player.sprite.particles:
+        for p in self.player.particles:
             hit: list[Enemy] = pg.sprite.spritecollide(p, self.enemies, False)
             if len(hit) > 1:
                 p.has_expired = True
             for h in hit:
-                h.current_hp -= self.player.sprite.attacks.power
+                h.current_hp -= self.player.attacks.power
                 if h.current_hp <= 0:
                     h.kill()
                     self.dead_sprites.add(h)
-
-        self.player.update(self.bounds, dt)
 
         for e in self.enemies:
             e.update(dt)
@@ -219,9 +231,14 @@ class Scene:
             self.spawn_enemies(random.choice(self.spawn_patterns))
             self.last_spawn = ticks
 
-        collisions = pg.sprite.spritecollide(self.player.sprite, self.enemies, False)
+        collisions: list[Enemy] = pg.sprite.spritecollide(self.player, self.enemies, False)
         for collide in collisions:
-            self.player.sprite.gain_innertia(pg.Vector2(collide.rect.center))
+            self.player.current_hp -= collide.power
+            if self.player.current_hp <= 0:
+                self.player.kill()
+                # logger.debug(self.player)
+            else:
+                self.player.gain_innertia(pg.Vector2(collide.rect.center))
 
     def spawn_enemies(self, pattern: EnemyPattern):
         """Spawn enemies based on the provided pattern
@@ -247,7 +264,7 @@ class Scene:
                         elif pattern.target:
                             d.move_towards(pattern.target)
                         else:
-                            d.move_towards(self.player.sprite.rect.center)
+                            d.move_towards(self.player.rect.center)
                         setattr(pattern, "leader_pos", spawn)
                         setattr(pattern, "leader_vel", d.velocity)
                     else:
@@ -266,7 +283,7 @@ class Scene:
                     elif pattern.target:
                         d.move_towards(pattern.target)
                     else:
-                        d.move_towards(self.player.sprite.rect.center)
+                        d.move_towards(self.player.rect.center)
                 spawned.append(d.rect)
                 d.add(self.enemies)
                 self.all_sprites.add(d, layer=1)
@@ -283,5 +300,5 @@ class Scene:
             SCreen or surface to draw the scene too.
         """
         self.all_sprites.draw(screen)
-        for p in self.player.sprite.particles:
+        for p in self.player.particles:
             p.draw(screen)
