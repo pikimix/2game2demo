@@ -77,7 +77,7 @@ class Scene:
         # Create enemies for use later
         for _ in range(2001):
             enemy = Enemy(self.spawn_outside(), sprite)
-            enemy.move_towards(pg.Vector2(self.player.sprites()[0].rect.center))
+            enemy.move_towards(pg.Vector2(self.player.sprite.rect.center))
             self.dead_sprites.add(enemy)
         # Make all the enemies red
         for enemy in self.dead_sprites:
@@ -188,7 +188,7 @@ class Scene:
                 key=lambda e: pow(e.rect.x-self.player.sprite.rect.x, 2)
                             + pow(e.rect.y-self.player.sprite.rect.y, 2))
             elif len(self.enemies) == 1:
-                enemy = self.enemies.sprites()[0]
+                enemy = self.enemies.sprite
             if enemy is not None:
                 self.player.sprite.attack(pg.Vector2(enemy.rect.center),ticks)
 
@@ -247,7 +247,7 @@ class Scene:
                         elif pattern.target:
                             d.move_towards(pattern.target)
                         else:
-                            d.move_towards(self.player.sprites()[0].rect.center)
+                            d.move_towards(self.player.sprite.rect.center)
                         setattr(pattern, "leader_pos", spawn)
                         setattr(pattern, "leader_vel", d.velocity)
                     else:
@@ -266,7 +266,7 @@ class Scene:
                     elif pattern.target:
                         d.move_towards(pattern.target)
                     else:
-                        d.move_towards(self.player.sprites()[0].rect.center)
+                        d.move_towards(self.player.sprite.rect.center)
                 spawned.append(d.rect)
                 d.add(self.enemies)
                 self.all_sprites.add(d, layer=1)
