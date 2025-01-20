@@ -195,12 +195,14 @@ class Scene:
         # Check if any of our attacks hit, kill enmies that are hit,
         # and remove the particle that killed them
         for p in self.player.sprite.particles:
-            killed = pg.sprite.spritecollide(p, self.enemies, False)
-            if len(killed) > 1:
+            hit: list[Enemy] = pg.sprite.spritecollide(p, self.enemies, False)
+            if len(hit) > 1:
                 p.has_expired = True
-            for k in killed:
-                k.kill()
-                self.dead_sprites.add(k)
+            for h in hit:
+                h.current_hp -= self.player.sprite.attacks.power
+                if h.current_hp <= 0:
+                    h.kill()
+                    self.dead_sprites.add(h)
 
         self.player.update(self.bounds, dt)
 

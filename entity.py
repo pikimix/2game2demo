@@ -54,6 +54,13 @@ class Entity(pg.sprite.DirtySprite):
         #
         #####
 
+        #####
+        # Health and aliveness
+        self.max_hp = 10
+        self.current_hp = 10
+        #
+        #####
+
     def load_sprite(self, sprite_details: dict[str,str|int]):
         """Load a sprite from a file
 
@@ -80,6 +87,7 @@ class Entity(pg.sprite.DirtySprite):
         """
         self.source_rect.topleft = (0,0)
         self.rect.topleft = origin
+        self.current_hp = self.max_hp
 
     def gain_innertia(self, innertia: pg.Vector2, scaler: int=1.5):
         """Replace current innertia with provided vector and scaler
