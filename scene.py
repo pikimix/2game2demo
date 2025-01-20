@@ -192,10 +192,10 @@ class Scene:
             if enemy is not None:
                 self.player.sprite.attack(pg.Vector2(enemy.rect.center),ticks)
 
-        # Check if any of our attacks hit, kill enmies that are hit, 
+        # Check if any of our attacks hit, kill enmies that are hit,
         # and remove the particle that killed them
         for p in self.player.sprite.particles:
-            killed = pg.sprite.spritecollide(p, self.enemies,False)
+            killed = pg.sprite.spritecollide(p, self.enemies, False)
             if len(killed) > 1:
                 p.has_expired = True
             for k in killed:
