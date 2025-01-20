@@ -88,6 +88,7 @@ class Entity(pg.sprite.DirtySprite):
         self.source_rect.topleft = (0,0)
         self.rect.topleft = origin
         self.current_hp = self.max_hp
+        self.innertia_scaler = 0
 
     def gain_innertia(self, innertia: pg.Vector2, scaler: int=1.5):
         """Replace current innertia with provided vector and scaler
@@ -308,6 +309,7 @@ class Enemy(Entity):
         self.behaviour = behaviour
         self.velocity = velocity
         self.has_been_onscreen = False
+        self.power = 1
 
     def respawn(self, origin: tuple[int, int]):
         """Respawn the entity at a new location.
