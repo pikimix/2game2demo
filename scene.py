@@ -86,16 +86,13 @@ class EnemyPattern:
         return pattern
 
     @staticmethod
-    def load_from_file(filepath: str, bounds: pg.rect) -> list[EnemyPattern]:
+    def load_from_file(filepath: str) -> list[EnemyPattern]:
         """Loads a YAML file representing all the EnemyPatterns required
 
         Parameters
         ----------
         filepath : str
             File path of the YAML file
-        
-        bounds : pg.rect
-            The bounds of the screen that enemies can target within
 
         Returns
         -------
@@ -153,7 +150,7 @@ class Scene:
         self.all_sprites.add(self.player, layer=2)
         self.spawn_patterns = []
         if enemy_pattern_yml is not None:
-            self.spawn_patterns = EnemyPattern.load_from_file(enemy_pattern_yml, bounds)
+            self.spawn_patterns = EnemyPattern.load_from_file(enemy_pattern_yml)
         else:
             self.spawn_patterns = [
                                     EnemyPattern(1, 'any'),
