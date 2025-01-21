@@ -4,6 +4,7 @@ from __future__ import annotations # To make type hinting work when using classe
 import logging
 import random
 import pygame as pg
+import yaml
 from pygame.sprite import Group, LayeredDirty
 from entity import Enemy, Player
 
@@ -54,12 +55,79 @@ class EnemyPattern:
         if target and target_direction:
             raise ValueError('Cannot set both target and target_direction')
 
+    @staticmethod
+    def create_from_dict(ep: dict) -> EnemyPattern:
+        """Create a new Enemmy Patter from a dictionary
+
+        Parameters
+        ----------
+        ep : dict
+            Dictionary representing the new enemy pattern
+
+        Returns
+        -------
+        EnemyPattern
+            The Enemy Pattern to be returned
+        """
+        pattern = EnemyPattern(0, 'any')
+        # Set the vaklue if every key to an attribute in the pattern object
+        for k, v in ep.items():
+            match k:
+                case 'target':
+                    match v:
+                        case 'bounds.center':
+                            pattern.target='bounds.center'
+                        case _: # If we cant parse the target, the target doesnt exist
+                            pattern.target=None
+                case 'target_direction':
+                    pattern.target_direction=pg.Vector2(v)
+                case _:
+                    setattr(pattern, k, v)
+        return pattern
+
+    @staticmethod
+    def load_from_file(filepath: str, bounds: pg.rect) -> list[EnemyPattern]:
+        """Loads a YAML file representing all the EnemyPatterns required
+
+        Parameters
+        ----------
+        filepath : str
+            File path of the YAML file
+        
+        bounds : pg.rect
+            The bounds of the screen that enemies can target within
+
+        Returns
+        -------
+        list[EnemyPattern]
+            The list of enemy patterns created
+        """
+        with open(filepath, 'r', encoding="utf-8") as f:
+            yml = yaml.safe_load(f)
+            eps = []
+            # if dict, assume single enemy pattern, assume single Enemy Pattern
+            if isinstance(yml, dict):
+                eps.append(EnemyPattern.create_from_dict(yml))
+            # If list, assume list of EnemyPatterns
+            elif isinstance(yml, list):
+                for pattern in yml:
+                    eps.append(EnemyPattern.create_from_dict(pattern))
+            return eps
+
 
 class Scene:
     """A scene (or "level") of the game
     """
-    def __init__(self, bounds: pg.Rect):
+    def __init__(self, bounds: pg.Rect, enemy_pattern_yml: str=None):
         """Create a new scene
+
+        Parameters
+        ----------
+        bounds : pg.Rect
+            Bounds of the playable screen
+        enemy_pattern_yml : str, optional
+            File path to load enemy patterns from, set to None to use default patterns
+            by default None
         """
         self.bounds = bounds
         sprite =  {
@@ -83,19 +151,22 @@ class Scene:
             enemy.tint('Red')
 
         self.all_sprites.add(self.player, layer=2)
-
-        self.spawn_patterns = [
-                                EnemyPattern(1, 'any'),
-                                EnemyPattern(20, 'left', has_leader=True),
-                                EnemyPattern(20, 'bottom', has_leader=True, distance=200),
-                                EnemyPattern(20, 'top', has_leader=True, distance=200,
-                                                target_direction=pg.Vector2(0,1)),
-                                EnemyPattern(20, 'right', has_leader=True, distance=50),
-                                EnemyPattern(20, 'right', has_leader=True,
-                                                target_direction=pg.Vector2(1,0)),
-                                EnemyPattern(200, 'top', target=self.bounds.center),
-                                EnemyPattern(200, 'bottom',target=self.bounds.center)
-        ]
+        self.spawn_patterns = []
+        if enemy_pattern_yml is not None:
+            self.spawn_patterns = EnemyPattern.load_from_file(enemy_pattern_yml, bounds)
+        else:
+            self.spawn_patterns = [
+                                    EnemyPattern(1, 'any'),
+                                    EnemyPattern(20, 'left', has_leader=True),
+                                    EnemyPattern(20, 'bottom', has_leader=True, distance=200),
+                                    EnemyPattern(20, 'top', has_leader=True, distance=200,
+                                                    target_direction=pg.Vector2(0,1)),
+                                    EnemyPattern(20, 'right', has_leader=True, distance=50),
+                                    EnemyPattern(20, 'right', has_leader=True,
+                                                    target_direction=pg.Vector2(1,0)),
+                                    EnemyPattern(200, 'top', target=self.bounds.center),
+                                    EnemyPattern(200, 'bottom',target=self.bounds.center)
+            ]
         self.last_spawn = 0
         self.spaw_timeout = 1000
 
@@ -259,12 +330,7 @@ class Scene:
                             pattern.spawn_type = random.choice(['top', 'left', 'right', 'bottom'])
                         spawn = self.spawn_outside(pattern.spawn_type)
                         d.respawn(spawn)
-                        if pattern.target_direction:
-                            d.set_direction(pattern.target_direction)
-                        elif pattern.target:
-                            d.move_towards(pattern.target)
-                        else:
-                            d.move_towards(self.player.rect.center)
+                        self.spawn_target(d, pattern)
                         setattr(pattern, "leader_pos", spawn)
                         setattr(pattern, "leader_vel", d.velocity)
                     else:
@@ -278,18 +344,34 @@ class Scene:
                         d.velocity = pattern.leader_vel
                 else:
                     d.respawn(self.spawn_outside(pattern.spawn_type))
-                    if pattern.target_direction:
-                        d.set_direction(pattern.target_direction)
-                    elif pattern.target:
-                        d.move_towards(pattern.target)
-                    else:
-                        d.move_towards(self.player.rect.center)
+                    self.spawn_target(d, pattern)
                 spawned.append(d.rect)
                 d.add(self.enemies)
                 self.all_sprites.add(d, layer=1)
                 if len(spawned) >= pattern.number_of_enemies:
                     break
         # logger.debug(spawned)
+
+    def spawn_target(self, enemy: Enemy, pattern: EnemyPattern):
+        """Set the movement target of a newly spawned enemy
+
+        Parameters
+        ----------
+        enemy : Enemy
+            Enemy to set the movement for
+        pattern : EnemyPattern
+            Spawn pattern dictating the movement of the enemy
+        """
+        match pattern.target: 
+            case 'bounds.center':
+                enemy.move_towards(self.bounds.center)
+            case pg.Vector2():
+                enemy.move_towards(pattern.target)
+            case _:
+                if pattern.target_direction:
+                    enemy.set_direction(pattern.target_direction)
+                else:
+                    enemy.move_towards(self.player.rect.center)
 
     def draw(self, screen: pg.Surface):
         """Draw the current scene to the provided screen
