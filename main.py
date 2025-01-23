@@ -7,6 +7,7 @@ import argparse
 import logging
 import pygame as pg
 from scene import Scene
+from app import App
 
 def signal_handler(sig: int, frame: types.FrameType) -> None:
     """
@@ -32,7 +33,8 @@ def signal_handler(sig: int, frame: types.FrameType) -> None:
 # parse arguments passed when started
 parser = argparse.ArgumentParser()
 parser.add_argument("-n", "--name", help="Player name", required=False)
-parser.add_argument("-v", "--verbosity", help="Logging verbosity - default vvv", action='count')
+parser.add_argument("-v", "--verbosity", help="Logging verbosity, default vvv", action='count')
+parser.add_argument('-c', '--config', help='location of config file, default ./config.yml')
 args = parser.parse_args()
 
 #create our logger and default to only show warnings
@@ -48,6 +50,15 @@ signal.signal(signal.SIGINT, signal_handler)
 
 # pg setup
 pg.init()# pylint: disable=no-member
+# initialise font support
+pg.font.init()
+# Now the game is initialised, load configs
+if args.config:
+    App.load()
+else:
+    # If theres no config file, set some defaults
+    App.set('font', pg.font.SysFont('Futura', 30))
+
 _screen = pg.display.set_mode((1280, 720))
 
 # set the clock
