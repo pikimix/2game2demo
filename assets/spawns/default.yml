@@ -29,16 +29,16 @@
   - 1
   - 0
 
-  # Center rushers
-- number_of_enemies: 200
-  spawn_type: 'top'
-  target: bounds.center
-- number_of_enemies: 200
-  spawn_type: 'bottom'
-  target: bounds.center
-- number_of_enemies: 200
-  spawn_type: 'left'
-  target: bounds.center
-- number_of_enemies: 200
-  spawn_type: 'right'
-  target: bounds.center
+#   # Center rushers
+# - number_of_enemies: 100
+#   spawn_type: 'top'
+#   target: bounds.center
+# - number_of_enemies: 100
+#   spawn_type: 'bottom'
+#   target: bounds.center
+# - number_of_enemies: 100
+#   spawn_type: 'left'
+#   target: bounds.center
+# - number_of_enemies: 100
+#   spawn_type: 'right'
+#   target: bounds.center
