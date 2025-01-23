@@ -48,7 +48,7 @@ class Entity(pg.sprite.DirtySprite):
         #####
         # Movement
         self.velocity = pg.Vector2(0,0)
-        self.max_velocity = 500
+        self.max_velocity = 300
         self.innertia_vector = pg.Vector2(0,0)
         self.innertia_scaler = 0
         #

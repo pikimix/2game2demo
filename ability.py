@@ -5,7 +5,7 @@ class BaseAttack:
     """Player Basic Attack
     """
 
-    def __init__(self, power: int=10, interval: int=100, uses: int=-1, is_super: bool=False,
+    def __init__(self, power: int=10, interval: int=500, uses: int=-1, is_super: bool=False,
                     particle: dict[str,str|int]=None):
         """Create a new basic attack with the provided details
 
