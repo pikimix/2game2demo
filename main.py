@@ -58,6 +58,7 @@ if args.config:
     App.load(args.config)
 if App.config('font') is None:
     # If theres no config file, set some defaults
+    logger.debug('No font loaded, loading Futura')
     App.set('font', pg.font.SysFont('Futura', 30))
 
 _screen = pg.display.set_mode((1280, 720))
