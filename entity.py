@@ -90,7 +90,7 @@ class Entity(pg.sprite.DirtySprite):
         self.current_hp = self.max_hp
         self.innertia_scaler = 0
 
-    def gain_innertia(self, innertia: pg.Vector2, scaler: int=1.5):
+    def gain_innertia(self, innertia: pg.Vector2, scaler: int=1.25):
         """Replace current innertia with provided vector and scaler
 
         Parameters
@@ -98,7 +98,7 @@ class Entity(pg.sprite.DirtySprite):
         innertia : pg.Vector2, optional
             Vector direction of the new innertia
         scaler : int, optional
-            Scaler to apply to the direction, default 2
+            Scaler to apply to the direction, default 1.25
         """
         if innertia:
             # logger.debug('self.innertia_vector=%s', self.innertia_vector)
