@@ -317,15 +317,16 @@ class Scene:
             Enemy pattern describing the spawn rate/ positions of enemies
         """
         spawned = []
+        spawn_type = pattern.spawn_type
         for d in self.dead_sprites:
             if isinstance(d, Enemy):
                 d.kill()
                 d.behaviour = pattern.enemy_behaviour
                 if pattern.has_leader:
                     if len(spawned) == 0:
-                        if pattern.spawn_type == 'any':
-                            pattern.spawn_type = random.choice(['top', 'left', 'right', 'bottom'])
-                        spawn = self.spawn_outside(pattern.spawn_type)
+                        if spawn_type == 'any':
+                            spawn_type = random.choice(['top', 'left', 'right', 'bottom'])
+                        spawn = self.spawn_outside(spawn_type)
                         d.respawn(spawn)
                         self.spawn_target(d, pattern)
                         setattr(pattern, "leader_pos", spawn)
