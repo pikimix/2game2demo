@@ -7,7 +7,8 @@ import pygame as pg
 import yaml
 from pygame.sprite import Group, LayeredDirty
 from entity import Enemy, Player
-from hud import Bar, Text
+from hud import Bar, Text, Scoreboard
+from app import App
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=0)
@@ -172,7 +173,9 @@ class Scene:
         # Hud
         self.hp = Bar(pg.Rect(self.bounds.centerx-50,self.bounds.bottom-20, 100,20))
         self.hp_label = Text(pg.Rect(self.bounds.centerx-50,self.bounds.bottom-40, 40,20), "HP")
-        self.hud = Group(self.hp, self.hp_label)
+        self.scoreboard = Scoreboard((10,10,0,0), {App.config('name'):0})
+        self.score = 0
+        self.hud = Group(self.hp, self.hp_label, self.scoreboard)
         #
         #####
 
@@ -283,6 +286,8 @@ class Scene:
                 self.player.respawn(self.bounds.center)
                 self.player.add(self.all_sprites)
                 self.hp.scale_bar(100)
+                self.score = 0
+                self.last_spawn = ticks
 
         # Check if any of our attacks hit, kill enmies that are hit,
         # and remove the particle that killed them
@@ -294,8 +299,9 @@ class Scene:
                 h.current_hp -= self.player.attacks.power
                 if h.current_hp <= 0:
                     h.kill()
+                    self.score += h.max_hp
                     self.dead_sprites.add(h)
-
+        self.scoreboard.update_scores({App.config('name'): self.score})
         for e in self.enemies:
             e.update(dt)
             if not self.bounds.colliderect(e.rect):
@@ -305,7 +311,7 @@ class Scene:
             elif not e.has_been_onscreen:
                 e.has_been_onscreen = True
 
-        if self.last_spawn + self.spaw_timeout < ticks:
+        if self.last_spawn + self.spaw_timeout < ticks and self.player.alive():
             self.spawn_enemies(random.choice(self.spawn_patterns))
             self.last_spawn = ticks
 
