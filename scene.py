@@ -7,6 +7,7 @@ import pygame as pg
 import yaml
 from pygame.sprite import Group, LayeredDirty
 from entity import Enemy, Player
+from hud import Bar, Text
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=0)
@@ -167,6 +168,14 @@ class Scene:
         self.last_spawn = 0
         self.spaw_timeout = 1000
 
+        #####
+        # Hud
+        self.hp = Bar(pg.Rect(self.bounds.centerx-50,self.bounds.bottom-20, 100,20))
+        self.hp_label = Text(pg.Rect(self.bounds.centerx-50,self.bounds.bottom-40, 40,20), "HP")
+        self.hud = Group(self.hp, self.hp_label)
+        #
+        #####
+
     def spawn_outside(self, direction: str='any') -> tuple[int, int]:
         """Provide spawn point thats outside the playable bounds.
 
@@ -185,16 +194,16 @@ class Scene:
         offset = [random.randint(50,100), random.randint(50,100)]
 
         if direction == 'top':
-            offset[0] = random.randint(0,self.bounds.width)
+            offset[0] = random.randint(-100,self.bounds.width + 100)
             offset[1] = -offset[1]
         if direction == 'left':
             offset[0] = -offset[0]
-            offset[1] = random.randint(0,self.bounds.height)
+            offset[1] = random.randint(-100,self.bounds.height + 100)
         if direction == 'right':
             offset[0] += self.bounds.width
-            offset[1] = random.randint(0,self.bounds.height)
+            offset[1] = random.randint(-100,self.bounds.height + 100)
         if direction == 'bottom':
-            offset[0] = random.randint(0,self.bounds.width)
+            offset[0] = random.randint(-100,self.bounds.width + 100)
             offset[1] += self.bounds.height
         return tuple(offset)
 
@@ -267,12 +276,13 @@ class Scene:
             for p in self.player.particles:
                 p.update(dt)
             self.player.particles = [p
-                                            for p in self.player.particles 
-                                            if not p.has_expired]
+                                    for p in self.player.particles
+                                    if not p.has_expired]
             keys = pg.key.get_pressed()
-            if keys[pg.K_SPACE]:
+            if keys[pg.K_SPACE]: # pylint: disable=no-member
                 self.player.respawn(self.bounds.center)
                 self.player.add(self.all_sprites)
+                self.hp.scale_bar(100)
 
         # Check if any of our attacks hit, kill enmies that are hit,
         # and remove the particle that killed them
@@ -304,8 +314,10 @@ class Scene:
             self.player.current_hp -= collide.power
             if self.player.current_hp <= 0:
                 self.player.kill()
+                self.hp.scale_bar(0)
                 # logger.debug(self.player)
             else:
+                self.hp.scale_bar(self.player.current_hp / self.player.max_hp)
                 self.player.gain_innertia(pg.Vector2(collide.rect.center))
 
     def spawn_enemies(self, pattern: EnemyPattern):
@@ -337,7 +349,7 @@ class Scene:
                                                         direction=pattern.spawn_type,
                                                         distance=pattern.distance))
                         else:
-                            d.respawn(self.spawn_near(pattern.leader_pos, 
+                            d.respawn(self.spawn_near(pattern.leader_pos,
                                                         direction=pattern.spawn_type))
                         d.velocity = pattern.leader_vel
                 else:
@@ -360,7 +372,7 @@ class Scene:
         pattern : EnemyPattern
             Spawn pattern dictating the movement of the enemy
         """
-        match pattern.target: 
+        match pattern.target:
             case 'bounds.center':
                 enemy.move_towards(self.bounds.center)
             case pg.Vector2():
@@ -382,3 +394,4 @@ class Scene:
         self.all_sprites.draw(screen)
         for p in self.player.particles:
             p.draw(screen)
+        self.hud.draw(screen)
