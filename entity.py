@@ -105,7 +105,8 @@ class Entity(pg.sprite.DirtySprite):
             self.innertia_vector = pg.Vector2(self.rect.center) - innertia
             self.innertia_vector.normalize_ip()
             self.innertia_scaler =  innertia.length() * scaler
-            # logger.debug('self.innertia_scaler=%s innertia.length()=%s', self.innertia_scaler, innertia.length())
+            # logger.debug('self.innertia_scaler=%s innertia.length()=%s',
+            #                 self.innertia_scaler, innertia.length())
 
     def update(self):
         """Update the current entity's animation frame
