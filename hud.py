@@ -64,3 +64,51 @@ class Text(Sprite):
             Text to render to screen
         """
         self.image = App.config('font').render(text, True, (0, 0, 0))
+
+class Scoreboard(Sprite):
+    """Scoreboard that tracks multiple lines of text
+    """
+
+    def __init__(self, rect: pg.Rect, scores: dict[str, int]):
+        """Create a new scoreboard with the provided dict of players/ scores
+
+        Parameters
+        ----------
+        rect : pg.Rect
+            Location to draw the scoreboard
+        scores : dict[str, int]
+            Dictionary of scores, in the format {'playername': int_score}
+        """
+        super().__init__()
+        self.rect = rect
+        self.scores = scores
+        self.image = pg.Surface((0,0),pg.SRCALPHA) # pylint: disable=no-member
+        self.update_scores(scores)
+
+    def update_scores(self, scores: dict[str, int]):
+        """Update the image with the new scores
+
+        Parameters
+        ----------
+        scores : dict[str, int]
+            Dictionary of scores, in the format {'playername': int_score}
+        """
+        # Create a new list of surfaces for each line
+        lines: list[pg.Surface] = []
+        # Render the scorboard header
+        lines.append(App.config('font').render('Scores', True, 'Black'))
+        # Keep track of the longest line while we loop through all scores
+        max_length = lines[0].get_width()
+        for name, score in scores.items():
+            # Render the new line, check its length and append to the list of lines
+            line = App.config('font').render(f'{name}: {score}', True, 'Black')
+            max_length = max(max_length, line.get_width())
+            lines.append(line)
+        # get the height of a line and create a big enough surface to render all lines
+        line_height = lines[0].get_height()
+        self.image: pg.Surface = pg.Surface((max_length, line_height * len(lines)), pg.SRCALPHA) # pylint: disable=no-member
+        for idx, line in enumerate(lines):
+            self.image.blit(
+                line,
+                (0,line_height*idx)
+            )
