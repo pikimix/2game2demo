@@ -34,7 +34,8 @@ def signal_handler(sig: int, frame: types.FrameType) -> None:
 parser = argparse.ArgumentParser()
 parser.add_argument("-n", "--name", help="Player name", required=False)
 parser.add_argument("-v", "--verbosity", help="Logging verbosity, default vvv", action='count')
-parser.add_argument('-c', '--config', help='location of config file, default ./config.yml')
+parser.add_argument('-c', '--config', help='location of config file, default ./config.yml',
+                        default='./config.yml')
 args = parser.parse_args()
 
 #create our logger and default to only show warnings
@@ -54,8 +55,8 @@ pg.init()# pylint: disable=no-member
 pg.font.init()
 # Now the game is initialised, load configs
 if args.config:
-    App.load()
-else:
+    App.load(args.config)
+if App.config('font') is None:
     # If theres no config file, set some defaults
     App.set('font', pg.font.SysFont('Futura', 30))
 
