@@ -1,44 +1,56 @@
+"""Module used for connecting to a remote websocket server
+"""
 
-
-import threading
-import websocket
-import queue
-import logging
 import json
-import uuid
+import logging
+import threading
 import time
+import queue
+import uuid
+import websocket
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=0)
 
 class Client:
-    def __init__(self, url, port):
+    """Class that creates a websocket Client to send and receive messages to a websocket server
+    """
+    def __init__(self, url: str, port):
+        """Creates a websocket Client
+
+        Parameters
+        ----------
+        url : str
+            URL to connect to
+        port : int
+            Port the remote server is listening on
+        """
         self.url = f"{url}:{port}"
         self.send_queue = queue.Queue()
         self.receive_queue = queue.Queue()
         self.ws = None
         self.thread = None
         self.running = False
-    
-    def on_message(self, ws, message):
+
+    def on_message(self, ws, message): # pylint: disable=unused-argument
         """Callback function when a message is received."""
         logger.debug('Message received: %s ', message)
         self.receive_queue.put(message)
-    
-    def on_error(self, ws, error):
+
+    def on_error(self, ws, error): # pylint: disable=unused-argument
         """Callback function when an error occurs."""
         logger.error('WebSocket error: %s', error)
-    
-    def on_close(self, ws, close_status_code, close_msg):
+
+    def on_close(self, ws, close_status_code, close_msg): # pylint: disable=unused-argument
         """Callback function when the connection is closed."""
         logger.info('WebSocket closed')
-    
-    def on_open(self, ws):
+
+    def on_open(self, ws): # pylint: disable=unused-argument
         """Callback function when the connection is opened."""
         logger.info("WebSocket connection opened")
         self.running = True
         threading.Thread(target=self._send_messages, daemon=True).start()
-    
+
     def _send_messages(self):
         """Continuously sends messages from the send queue."""
         while self.running:
@@ -49,7 +61,7 @@ class Client:
                 self.ws.send(message)
             except queue.Empty:
                 continue
-    
+
     def send(self, message: str):
         """Send message to the server
 
@@ -78,15 +90,15 @@ class Client:
         list
             All messages currently in the queue
         """
-        if not receive_q.empty():
+        if not self.receive_queue.empty():
             ret = []
-            while not receive_q.empty():
-                ret.append(receive_q.get())
-                receive_q.task_done()
+            while not self.receive_queue.empty():
+                ret.append(self.receive_queue.get())
+                self.receive_queue.task_done()
             return ret
         else:
             return []
-        
+
     def start(self):
         """Starts the WebSocket connection in a separate thread."""
         # websocket.enableTrace(True)
@@ -99,7 +111,7 @@ class Client:
         )
         self.thread = threading.Thread(target=self.ws.run_forever, daemon=True)
         self.thread.start()
-    
+
     def stop(self):
         """Stops the WebSocket connection."""
         self.running = False
@@ -114,13 +126,13 @@ if __name__ == "__main__":
     receive_q = queue.Queue()
     client = Client("ws://127.0.0.1", 8080)
     client.start()
-    
+
     # Sending a test message
     my_uuid = uuid.uuid4()
     client.send(json.dumps({'uuid':str(my_uuid), 'time': time.time()}))
 
     client.send(json.dumps({'pos':(0,0)}))
-    
+
     # Receiving messages (example)
     try:
         while True:
