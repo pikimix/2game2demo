@@ -120,13 +120,13 @@ class Server:
 
         Parameters
         ----------
-        message : str
-            String message to send to the server
+        message : dict
+            Dictionary message to send to the server
 
         Raises
         ------
         TypeError
-            Raised when message is not of type str
+            Raised when message is not of type dict
         """
         if isinstance(message, dict):
             await self.send_queue.put(message)
