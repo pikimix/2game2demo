@@ -57,7 +57,7 @@ class Client:
             try:
                 message = self.send_queue.get(timeout=1)  # Wait for messages
                 # message = json.dumps(message)
-                logger.info('Sending message: %s', message)
+                logger.debug('Sending message: %s', message)
                 self.ws.send(json.dumps(message))
             except queue.Empty:
                 continue
