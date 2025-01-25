@@ -172,8 +172,9 @@ class Entity(pg.sprite.DirtySprite):
 class Player(Entity):
     """A locally controllable player extension to the entity class
     """
-    def __init__(self, origin, sprite_details):
-        super().__init__(origin, sprite_details)
+    def __init__(self, origin: tuple[int, int], sprite_details: dict[str,str|int]|None, 
+                    euuid: uuid.uuid4=None):
+        super().__init__(origin, sprite_details, euuid)
         self.click_move: bool = False
         self.click_target: pg.Vector2 = None
         self.particles: list[Particle] = []
@@ -296,8 +297,9 @@ class Player(Entity):
 class Enemy(Entity):
     """Basic enemy class, may be more complex ones later, or may just add behaviours to this.
     """
-    def __init__(self, origin: tuple[int, int], sprite_details: dict[str,str|int]|None,
-                    behaviour: int|str|None=None, velocity: pg.Vector2=pg.Vector2(0,0)):
+    def __init__(self, origin: tuple[int, int], sprite_details: dict[str,str|int]|None, 
+                    behaviour: int|str|None=None, velocity: pg.Vector2=pg.Vector2(0,0),
+                    euuid: uuid.uuid4=None):
         """Create a basic Enemy class, with basic behaviours
 
         Parameters
@@ -312,7 +314,7 @@ class Enemy(Entity):
             default velocity of the enemy, in case it is a dumb "move this way" type
             by default pg.Vector2(0,0)
         """
-        super().__init__(origin, sprite_details)
+        super().__init__(origin, sprite_details, euuid)
         self.behaviour = behaviour
         self.velocity = velocity
         self.has_been_onscreen = False
