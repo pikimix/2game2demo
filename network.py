@@ -35,7 +35,7 @@ class Client:
     def on_message(self, ws, message): # pylint: disable=unused-argument
         """Callback function when a message is received."""
         logger.debug('Message received: %s ', message)
-        self.receive_queue.put(message)
+        self.receive_queue.put(json.loads(message))
 
     def on_error(self, ws, error): # pylint: disable=unused-argument
         """Callback function when an error occurs."""
