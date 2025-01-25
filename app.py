@@ -17,10 +17,12 @@ class App:
         Raised when something tries to set a value to a read only attribute
     """
     __conf = {
-        "name": "Player",
-        "font": None # Font needs to be initialised before this is set pg.font.SysFont('Futura', 30)
+        'name': 'Player',
+        'font': None, # Font needs to be initialised before this is set
+        # default font is set in main as pg.font.SysFont('Futura', 30)
+        'url' : None,
+        'port' : 8080
     }
-    __setters = ["name", "font"]
 
     @staticmethod
     def config(name: str) -> typing.Any:
@@ -36,7 +38,7 @@ class App:
         Any
             The config value requested.
         """
-        return App.__conf[name]
+        return App.__conf.get(name, None)
 
     @staticmethod
     def set(name: str, value: typing.Any):
@@ -54,10 +56,7 @@ class App:
         NameError
             Raised when the requested item is not settable
         """
-        if name in App.__setters:
-            App.__conf[name] = value
-        else:
-            raise NameError("Name not accepted in set() method")
+        App.__conf[name] = value
 
     @staticmethod
     def load(filepath: str='config.yml'):
