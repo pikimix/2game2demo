@@ -14,7 +14,7 @@ class Entity(pg.sprite.DirtySprite):
     """Basic entity that gets drawn to screen
     """
 
-    def __init__(self, origin: tuple[int, int], sprite_details: dict[str,str|int]|None, 
+    def __init__(self, origin: tuple[int, int], sprite_details: dict[str,str|int]|None,
                     euuid: uuid.uuid4=None):
         """Create new basic entity that gets drawn to screen
 
@@ -26,7 +26,7 @@ class Entity(pg.sprite.DirtySprite):
             details of the sprite to be drawn
         """
         super().__init__()
-            
+
         self.uuid = euuid
         if self.uuid is None:
             self.uuid = uuid.uuid4()
@@ -172,7 +172,7 @@ class Entity(pg.sprite.DirtySprite):
 class Player(Entity):
     """A locally controllable player extension to the entity class
     """
-    def __init__(self, origin: tuple[int, int], sprite_details: dict[str,str|int]|None, 
+    def __init__(self, origin: tuple[int, int], sprite_details: dict[str,str|int]|None,
                     euuid: uuid.uuid4=None):
         super().__init__(origin, sprite_details, euuid)
         self.click_move: bool = False
@@ -297,7 +297,7 @@ class Player(Entity):
 class Enemy(Entity):
     """Basic enemy class, may be more complex ones later, or may just add behaviours to this.
     """
-    def __init__(self, origin: tuple[int, int], sprite_details: dict[str,str|int]|None, 
+    def __init__(self, origin: tuple[int, int], sprite_details: dict[str,str|int]|None,
                     behaviour: int|str|None=None, velocity: pg.Vector2=pg.Vector2(0,0),
                     euuid: uuid.uuid4=None):
         """Create a basic Enemy class, with basic behaviours
