@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=0)
 
 class Client:
-    def __init__(self, url, port, send_queue, receive_queue):
+    def __init__(self, url, port):
         self.url = f"{url}:{port}"
-        self.send_queue = send_queue
-        self.receive_queue = receive_queue
+        self.send_queue = queue.Queue()
+        self.receive_queue = queue.Queue()
         self.ws = None
         self.thread = None
         self.running = False
@@ -37,9 +37,9 @@ class Client:
         """Callback function when the connection is opened."""
         logger.info("WebSocket connection opened")
         self.running = True
-        threading.Thread(target=self.send_messages, daemon=True).start()
+        threading.Thread(target=self._send_messages, daemon=True).start()
     
-    def send_messages(self):
+    def _send_messages(self):
         """Continuously sends messages from the send queue."""
         while self.running:
             try:
@@ -50,6 +50,43 @@ class Client:
             except queue.Empty:
                 continue
     
+    def send(self, message: str):
+        """Send message to the server
+
+        Parameters
+        ----------
+        message : str
+            String message to send to the server
+
+        Raises
+        ------
+        TypeError
+            Raised when message is not of type str
+        """
+        if isinstance(message, str):
+            self.send_queue.put(message)
+        else:
+            raise TypeError(f'Only strings can be sent, not {type(message)}')
+
+
+    def get_messages(self) -> list:
+        """Gets all current received messages in the queue.
+            If the queue is empty, returns empty list
+
+        Returns
+        -------
+        list
+            All messages currently in the queue
+        """
+        if not receive_q.empty():
+            ret = []
+            while not receive_q.empty():
+                ret.append(receive_q.get())
+                receive_q.task_done()
+            return ret
+        else:
+            return []
+        
     def start(self):
         """Starts the WebSocket connection in a separate thread."""
         # websocket.enableTrace(True)
@@ -75,21 +112,21 @@ class Client:
 if __name__ == "__main__":
     send_q = queue.Queue()
     receive_q = queue.Queue()
-    client = Client("ws://127.0.0.1", 8080, send_q, receive_q)
+    client = Client("ws://127.0.0.1", 8080)
     client.start()
     
     # Sending a test message
     my_uuid = uuid.uuid4()
-    send_q.put(json.dumps({'uuid':str(my_uuid), 'time': time.time()}))
+    client.send(json.dumps({'uuid':str(my_uuid), 'time': time.time()}))
 
-    send_q.put(json.dumps({'pos':(0,0)}))
+    client.send(json.dumps({'pos':(0,0)}))
     
     # Receiving messages (example)
     try:
         while True:
-            if not receive_q.empty():
+            msgs = client.get_messages()
+            for msg in msgs:
                 logger.info('Received Message!')
-                msg = receive_q.get()
                 logger.info("Received: %s", msg)
     except KeyboardInterrupt:
         client.stop()
