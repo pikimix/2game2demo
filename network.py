@@ -58,27 +58,27 @@ class Client:
                 message = self.send_queue.get(timeout=1)  # Wait for messages
                 # message = json.dumps(message)
                 logger.info('Sending message: %s', message)
-                self.ws.send(message)
+                self.ws.send(json.dumps(message))
             except queue.Empty:
                 continue
 
-    def send(self, message: str):
+    def send(self, message: dict):
         """Send message to the server
 
         Parameters
         ----------
-        message : str
-            String message to send to the server
+        message : dict
+            Dictionary message to send to the server
 
         Raises
         ------
         TypeError
-            Raised when message is not of type str
+            Raised when message is not of type dict
         """
-        if isinstance(message, str):
+        if isinstance(message, dict):
             self.send_queue.put(message)
         else:
-            raise TypeError(f'Only strings can be sent, not {type(message)}')
+            raise TypeError(f'Only dicts can be sent, not {type(message)}')
 
 
     def get_messages(self) -> list:
@@ -129,9 +129,9 @@ if __name__ == "__main__":
 
     # Sending a test message
     my_uuid = uuid.uuid4()
-    client.send(json.dumps({'uuid':str(my_uuid), 'time': time.time()}))
+    client.send({'uuid':str(my_uuid), 'time': time.time()})
 
-    client.send(json.dumps({'pos':(0,0)}))
+    client.send({'pos':(0,0)})
 
     # Receiving messages (example)
     try:
