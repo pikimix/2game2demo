@@ -143,7 +143,6 @@ class Scene:
         # Create enemies for use later
         for _ in range(2001):
             enemy = Enemy(self.spawn_outside(), sprite)
-            enemy.move_towards(pg.Vector2(self.player.rect.center))
             self.dead_sprites.add(enemy)
         # Make all the enemies red
         for enemy in self.dead_sprites:
