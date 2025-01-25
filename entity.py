@@ -30,6 +30,8 @@ class Entity(pg.sprite.DirtySprite):
         self.uuid = euuid
         if self.uuid is None:
             self.uuid = uuid.uuid4()
+        elif isinstance(euuid, str):
+            self.uuid = uuid.UUID(euuid)
         #####
         # Set up the sprite
         self.dirty = 2
@@ -124,6 +126,29 @@ class Entity(pg.sprite.DirtySprite):
                 self.source_rect.x = 0
             self.last_frame = pg.time.get_ticks()
 
+    def net_update(self, values:dict[str,str|list[int]]):
+        """Update entity with dict passed from the server
+
+        Parameters
+        ----------
+        values : dict[str,str | list[int]]
+            Dictionary with values to be set
+
+        Raises
+        ------
+        ValueError
+            If the UUID passed in the values doesn't match us, raise an error
+        """
+        for attr, value in values.items():
+            match attr:
+                case 'uuid':
+                    if uuid.UUID(value) != self.uuid:
+                        raise ValueError('Update passed to sprit with non-matching UUID.')
+                case 'position':
+                    self.rect.topleft = value
+                case _: # Trusting my self a bit much here, but should be sane
+                    setattr(self, attr, value)
+
     def move_towards(self, target: pg.Vector2):
         """
         Sets velocity to move the object towards a target position.
@@ -168,6 +193,15 @@ class Entity(pg.sprite.DirtySprite):
         if color:
             tinted.fill(color,None,pg.BLEND_RGBA_MIN)# pylint: disable=no-member
         self.image = tinted.copy()
+class Ghost(Entity):
+    """Network Ghost entity - other players that you can partially interact with
+    """
+
+    def __init__(self, origin: tuple[int, int], sprite_details: dict[str,str|int]|None,
+                    velocity: pg.Vector2=pg.Vector2(0,0), euuid: uuid.uuid4=None):
+        super().__init__(origin, sprite_details, euuid)
+        self.velocity = velocity
+        self.tint((128,128,128,128))
 
 class Player(Entity):
     """A locally controllable player extension to the entity class
