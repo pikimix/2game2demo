@@ -3,12 +3,14 @@
 from __future__ import annotations # To make type hinting work when using classes within this file
 import logging
 import random
+import time
 import pygame as pg
-import yaml
 from pygame.sprite import Group, LayeredDirty
-from entity import Enemy, Player
-from hud import Bar, Text, Scoreboard
+import yaml
 from app import App
+from entity import Enemy, Ghost, Player
+from hud import Bar, Scoreboard, Text
+from network import Client
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=0)
@@ -129,20 +131,21 @@ class Scene:
             by default None
         """
         self.bounds = bounds
-        sprite =  {
+        self.sprite =  {
             'file':'assets/sprites/player.png',
             'width': 32,
             'height': 32,
             'frames': 4
         }
-        self.player: Player = Player(bounds.center, sprite)
-        self.all_sprites: LayeredDirty[Enemy|Player] = LayeredDirty()
+        self.player: Player = Player(bounds.center, self.sprite)
+        self.all_sprites: LayeredDirty[Enemy|Ghost|Player] = LayeredDirty()
         self.enemies: Group[Enemy] = Group()
-        self.dead_sprites: Group = Group()
+        self.dead_sprites: Group[Enemy|Ghost|Player] = Group()
+        self.ghosts: Group[Ghost] = Group()
 
         # Create enemies for use later
         for _ in range(2001):
-            enemy = Enemy(self.spawn_outside(), sprite)
+            enemy = Enemy(self.spawn_outside(), self.sprite)
             self.dead_sprites.add(enemy)
         # Make all the enemies red
         for enemy in self.dead_sprites:
@@ -177,6 +180,19 @@ class Scene:
         self.hud = Group(self.hp, self.hp_label, self.scoreboard)
         #
         #####
+
+        #####
+        # Net
+        self.client = None
+        if App.config('url'):
+            url = App.config('url')
+            if 'ws://' not in url:
+                url = f'ws://{url}'
+            port = 8080 if not App.config('port') else App.config('port')
+            self.client = Client(url, port)
+            self.client.start()
+            self.client.send({'uuid':str(self.player.uuid), 'time': time.time()})
+            logger.debug(self.client)
 
     def spawn_outside(self, direction: str='any') -> tuple[int, int]:
         """Provide spawn point thats outside the playable bounds.
@@ -324,6 +340,38 @@ class Scene:
             else:
                 self.hp.scale_bar(self.player.current_hp / self.player.max_hp)
                 self.player.gain_innertia(pg.Vector2(collide.rect.center))
+
+        if self.client is not None:
+            msg = {'time': time.time()}
+            for key, value in vars(self.player).items():
+                match key:
+                    case 'uuid':
+                        msg['uuid'] = str(value)
+                    case 'rect':
+                        msg['position'] = value.topleft
+                    case x if x in ['velocity', 'innertia_vector']:
+                        msg[key] = [value.x, value.y]
+                    case 'innertia_scaler':
+                        msg['innertia_scaler'] = value
+                    case _:
+                        pass
+            self.client.send(msg)
+            # This can probably be cleaned up
+            for update in self.client.get_messages():
+                for ruuid, values in update.items():
+                    if ruuid == 'offset' or ruuid == str(self.player.uuid):
+                        continue
+                    uuid_found = False
+                    for sprite in self.ghosts:
+                        if str(sprite.uuid) == ruuid:
+                            uuid_found = True
+                            sprite.net_update(values)
+                    if not uuid_found:
+                        g = Ghost((0,0), self.sprite, euuid=ruuid)
+                        g.net_update(values)
+                        self.ghosts.add(g)
+                        self.all_sprites.add(g)
+
 
     def spawn_enemies(self, pattern: EnemyPattern):
         """Spawn enemies based on the provided pattern
