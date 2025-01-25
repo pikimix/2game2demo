@@ -39,12 +39,15 @@ parser.add_argument('-c', '--config', help='location of config file, default ./c
 args = parser.parse_args()
 
 #create our logger and default to only show warnings
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.WARNING)
+loglevel = logging.WARNING
 if args.verbosity:
     if args.verbosity <= 5:
         # Calculate log level from number of v's passed in
-        logger.setLevel((6 - args.verbosity) * 10)
+        loglevel = (6 - args.verbosity) * 10
+    else:
+        loglevel = logging.DEBUG
+logging.basicConfig(level=loglevel, force=True)
+logger = logging.getLogger(__name__)
 logger.info(' Log Level=%s', logging.getLevelName(logger.getEffectiveLevel()))
 
 signal.signal(signal.SIGINT, signal_handler)
