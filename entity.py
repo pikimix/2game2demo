@@ -1,6 +1,7 @@
 """ Collection of entitys that exist within the gamespace
 """
 import logging
+import uuid
 import pygame as pg
 from particle import Particle
 from ability import BaseAttack
@@ -13,7 +14,8 @@ class Entity(pg.sprite.DirtySprite):
     """Basic entity that gets drawn to screen
     """
 
-    def __init__(self, origin: tuple[int, int], sprite_details: dict[str,str|int]|None):
+    def __init__(self, origin: tuple[int, int], sprite_details: dict[str,str|int]|None, 
+                    euuid: uuid.uuid4=None):
         """Create new basic entity that gets drawn to screen
 
         Parameters
@@ -24,6 +26,10 @@ class Entity(pg.sprite.DirtySprite):
             details of the sprite to be drawn
         """
         super().__init__()
+            
+        self.uuid = euuid
+        if self.uuid is None:
+            self.uuid = uuid.uuid4()
         #####
         # Set up the sprite
         self.dirty = 2
