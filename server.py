@@ -87,7 +87,7 @@ class Server:
         """
         while True:
             message = await self.send_queue.get()
-            logging.info('broadcaster: sending %s', str(message))
+            logger.debug('broadcaster: sending %s', str(message))
             if message:
                 await asyncio.gather(*(self._send_message(client, message)
                                         for client in self.clients.values()
@@ -112,7 +112,7 @@ class Server:
         logger.debug('server.sendmessage: type(client[\'time_offset\'])=%s',
                         type(client["time_offset"]))
         message['offset'] = client['time_offset']
-        logger.info('sending: %s', json.dumps(message))
+        logger.debug('sending: %s', json.dumps(message))
         await client['ws'].send(json.dumps(message))
 
     async def send(self, message: dict):
@@ -183,7 +183,7 @@ async def process_messages(message_server: Server):
     while True:
         msgs: list[dict] = message_server.get_messages()
         for msg in msgs:
-            logger.info(msg)
+            logger.debug(msg)
             for uuid, payload in msg.items():
                 if payload == 'remove':
                     del gamestate[uuid]
@@ -195,7 +195,7 @@ async def process_messages(message_server: Server):
             await message_server.send(gamestate)
             gamestate_updated = False
 
-        await asyncio.sleep(1)  # Prevents busy-waiting
+        await asyncio.sleep(0.01)  # Prevents busy-waiting
 
 def shutdown_handler(*args):
     """
