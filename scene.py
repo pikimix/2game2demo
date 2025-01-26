@@ -307,15 +307,13 @@ class Scene:
         # Check if any of our attacks hit, kill enmies that are hit,
         # and remove the particle that killed them
         for p in self.player.particles:
-            hit: list[Enemy] = pg.sprite.spritecollide(p, self.enemies, False)
-            if len(hit) > 1:
-                p.has_expired = True
-            for h in hit:
-                h.current_hp -= self.player.attacks.power
-                if h.current_hp <= 0:
-                    h.kill()
-                    self.score += h.max_hp
-                    self.dead_sprites.add(h)
+            try:
+                enemies = getattr(p, 'sub_particles')
+                for e in enemies:
+                    self.check_attacks(e, self.player.attacks.power, self.enemies)
+            except AttributeError:
+                self.check_attacks(p, self.player.attacks.power, self.enemies)
+
         self.scoreboard.update_scores({App.config('name'): self.score})
         for e in self.enemies:
             e.update(dt)
@@ -342,38 +340,74 @@ class Scene:
                 self.player.gain_innertia(pg.Vector2(collide.rect.center))
 
         if self.client is not None:
-            msg = {'time': time.time()}
-            for key, value in vars(self.player).items():
-                match key:
-                    case 'uuid':
-                        msg['uuid'] = str(value)
-                    case 'rect':
-                        msg['position'] = value.topleft
-                    case x if x in ['velocity', 'innertia_vector']:
-                        msg[key] = [value.x, value.y]
-                    case 'innertia_scaler':
-                        msg['innertia_scaler'] = value
-                    case _:
-                        pass
-            self.client.send(msg)
-            # This can probably be cleaned up
-            self.ghosts.update(dt=dt)
-            for update in self.client.get_messages():
-                logger.debug('Scene.update: processing %s network updates', len(update))
-                for ruuid, values in update.items():
-                    if ruuid == 'offset' or ruuid == str(self.player.uuid):
-                        continue
-                    uuid_found = False
-                    for sprite in self.ghosts:
-                        if str(sprite.uuid) == ruuid:
-                            uuid_found = True
-                            sprite.net_update(values)
-                    if not uuid_found:
-                        g = Ghost((0,0), self.sprite, euuid=ruuid)
-                        g.net_update(values)
-                        self.ghosts.add(g)
-                        self.all_sprites.add(g)
+            self.net_update(dt)
 
+    def net_update(self, dt: float):
+        """Process updates from a network server
+
+        Parameters
+        ----------
+        dt : float
+            delta time for velocity updates on network elements between messages
+        """
+        # This can probably be cleaned up
+        # Update local ghosts
+        self.ghosts.update(dt=dt)
+        for update in self.client.get_messages():
+            logger.debug('Scene.update: processing %s network updates', len(update))
+            for ruuid, values in update.items():
+                if ruuid == 'offset' or ruuid == str(self.player.uuid):
+                    continue
+                uuid_found = False
+                for sprite in self.ghosts:
+                    if str(sprite.uuid) == ruuid:
+                        uuid_found = True
+                        sprite.net_update(values)
+                if not uuid_found:
+                    g = Ghost((0,0), self.sprite, euuid=ruuid)
+                    g.net_update(values)
+                    self.ghosts.add(g)
+                    self.all_sprites.add(g)
+
+        # end by sending out update
+        msg = {'time': time.time()}
+        for key, value in vars(self.player).items():
+            match key:
+                case 'uuid':
+                    msg['uuid'] = str(value)
+                case 'rect':
+                    msg['position'] = value.topleft
+                case x if x in ['velocity', 'innertia_vector']:
+                    msg[key] = [value.x, value.y]
+                case 'innertia_scaler':
+                    msg['innertia_scaler'] = value
+                case _:
+                    pass
+        self.client.send(msg)
+
+    def check_attacks(self, attack: pg.sprite.Sprite, attack_pwr: int,
+                            targets: Group):
+        """Check if an attack (normally a particle or sub particle) hiss an target (normally a 
+        sprite group of enemies)
+
+        Parameters
+        ----------
+        attack : pg.sprite.Sprite
+            Sprite or sprite like object that is doing the attack
+        attack_pwr : int
+            Damage the attack does if it hits
+        targets : Group
+            SpriteGroup of targets
+        """
+        hit: Group[Enemy|Player] = pg.sprite.spritecollide(attack, targets, False)
+        for h in hit:
+            h.current_hp -= attack_pwr
+            if h.current_hp <= 0:
+                h.kill()
+                self.score += h.max_hp
+                self.dead_sprites.add(h)
+        if len(hit):
+            attack.has_expired = True
 
     def spawn_enemies(self, pattern: EnemyPattern):
         """Spawn enemies based on the provided pattern
