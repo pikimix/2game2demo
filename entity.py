@@ -4,7 +4,7 @@ import logging
 import random
 import uuid
 import pygame as pg
-from particle import Particle
+from particle import Particle, Explosion
 from ability import BaseAttack
 
 
@@ -256,6 +256,8 @@ class Player(Entity):
         self.particles: list[Particle] = []
         self.last_attack: int = 0
         self.attacks = BaseAttack()
+        self.super =BaseAttack(base_particle=Explosion(self.rect, pg.Vector2(0,0), 'Yellow'),
+                                    max_velocity=0, interval=5000)
 
     def attack(self, target: pg.Vector2, ticks: int):
         """Create a new particle for the players "Attack"
@@ -269,11 +271,8 @@ class Player(Entity):
         """
         self.last_attack = ticks
         direction = (target - pg.Vector2(self.rect.center)).normalize()
-        direction *= self.attacks.particle['max_vel']
-        self.particles.append(Particle(pg.Rect(self.rect),
-                                        direction,
-                                        self.attacks.particle['color'],
-                                        self.attacks.particle['lifetime']))
+        direction *= self.attacks.max_velocity
+        self.particles.append(self.attacks.particle.reset(pg.Rect(self.rect),direction))
 
     def update(self, bounds: pg.Rect=None, dt: float=None):
         """Update the player movement, before passing to the parent class to update animation
