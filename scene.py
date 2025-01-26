@@ -357,7 +357,9 @@ class Scene:
                         pass
             self.client.send(msg)
             # This can probably be cleaned up
+            self.ghosts.update(dt=dt)
             for update in self.client.get_messages():
+                logger.debug('Scene.update: processing %s network updates', len(update))
                 for ruuid, values in update.items():
                     if ruuid == 'offset' or ruuid == str(self.player.uuid):
                         continue

@@ -1,6 +1,7 @@
 """ Collection of entitys that exist within the gamespace
 """
 import logging
+import random
 import uuid
 import pygame as pg
 from particle import Particle
@@ -146,6 +147,8 @@ class Entity(pg.sprite.DirtySprite):
                         raise ValueError('Update passed to sprit with non-matching UUID.')
                 case 'position':
                     self.rect.topleft = value
+                case x if x in ['velocity', 'innertia_vector']:
+                    setattr(self, attr, pg.Vector2(value))
                 case _: # Trusting my self a bit much here, but should be sane
                     setattr(self, attr, value)
 
@@ -202,6 +205,45 @@ class Ghost(Entity):
         super().__init__(origin, sprite_details, euuid)
         self.velocity = velocity
         self.tint((128,128,128,128))
+        self.change_time = pg.time.get_ticks()
+        # Set the ghost to be on screen for random time betwen 1 and 10 seconds
+        self.lifetime = random.randint(1000, 10000)
+        self.hidden_for = 0
+        self.hidden = False
+
+    def update(self, dt: float=None):
+        """Update the ghosts position based on its last known velocity
+
+        Parameters
+        ----------
+        dt : float
+            time since last frame for velocity scaling maths
+        """
+        # If the ghost is alive, update it
+        if self.lifetime > 0:
+            if self.change_time + self.lifetime <= pg.time.get_ticks():
+                logger.info('Ghost.update: hiding')
+                self.hidden_for = random.randint(1000, 10000)
+                self.lifetime = 0
+                self.visible = 0
+                self.change_time = pg.time.get_ticks()
+            # Update the parent sprite class to update animation
+            super().update()
+            # Move the ghost based on their last known velocity
+            if self.innertia_scaler > 0:
+                inertia = self.innertia_vector * self.innertia_scaler
+                self.rect.move_ip(inertia * dt)
+                self.innertia_scaler -= self.max_velocity * 8 * dt
+            else:
+                self.rect.move_ip(self.velocity * dt)
+        # if the ghost is not alive, check if it needs respawning
+        elif self.change_time + self.hidden_for <= pg.time.get_ticks():
+            logger.info('Ghost.update: revealing')
+            self.lifetime = random.randint(1000, 10000)
+            self.hidden_for = 0
+            self.visible = 1
+            self.change_time = pg.time.get_ticks()
+
 
 class Player(Entity):
     """A locally controllable player extension to the entity class
@@ -243,6 +285,8 @@ class Player(Entity):
         dt : float
             time since last frame for velocity scaling maths
         """
+        # Update the parent sprite class to update animation
+        super().update()
         if self.innertia_scaler > 0:
             inertia = self.innertia_vector * self.innertia_scaler
             self.rect.move_ip(inertia * dt)
@@ -324,9 +368,6 @@ class Player(Entity):
                 self.rect.top = bounds.top
             elif self.rect.bottom > bounds.bottom:
                 self.rect.bottom = bounds.bottom
-
-        # Update the parent sprite class to update animation
-        super().update()
 
 class Enemy(Entity):
     """Basic enemy class, may be more complex ones later, or may just add behaviours to this.
