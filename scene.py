@@ -11,6 +11,7 @@ from app import App
 from entity import Enemy, Ghost, Player
 from hud import Bar, Scoreboard, Text
 from network import Client
+from particle import Explosion, Particle
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=0)
@@ -142,6 +143,7 @@ class Scene:
         self.enemies: Group[Enemy] = Group()
         self.dead_sprites: Group[Enemy|Ghost|Player] = Group()
         self.ghosts: Group[Ghost] = Group()
+        self.super_attacks: dict[str,list[Explosion|Particle]] = {}
 
         # Create enemies for use later
         for _ in range(2001):
@@ -173,11 +175,13 @@ class Scene:
 
         #####
         # Hud
-        self.hp = Bar(pg.Rect(self.bounds.centerx-50,self.bounds.bottom-20, 100,20))
-        self.hp_label = Text(pg.Rect(self.bounds.centerx-50,self.bounds.bottom-40, 40,20), "HP")
+        self.hp = Bar(pg.Rect(self.bounds.centerx-100,self.bounds.bottom-20, 100,20))
+        self.hp_label = Text(pg.Rect(self.bounds.centerx-100,self.bounds.bottom-40, 40,20), "HP")
+        self.super = Bar(pg.Rect(self.bounds.centerx,self.bounds.bottom-20, 100,20), color='Blue')
+        self.super_label = Text(pg.Rect(self.bounds.centerx,self.bounds.bottom-40, 40,20), "SUPER")
         self.scoreboard = Scoreboard((10,10,0,0), {App.config('name'):0})
         self.score = 0
-        self.hud = Group(self.hp, self.hp_label, self.scoreboard)
+        self.hud = Group(self.hp, self.hp_label, self.super, self.super_label, self.scoreboard)
         #
         #####
 
@@ -288,6 +292,19 @@ class Scene:
                     self.player.attack(pg.Vector2(enemy.rect.center), ticks)
 
             self.player.update(self.bounds, dt)
+            # Check if the player can/ has triggered super
+            super_charge = (ticks - self.player.last_super)/  self.player.super_ability.interval
+            if super_charge > 1:
+                super_charge = 1
+                keys = pg.key.get_pressed()
+                if keys[pg.K_SPACE]: # pylint: disable=no-member
+                    if self.player.uuid in self.super_attacks:
+                        self.super_attacks[self.player.uuid].append(
+                            self.player.super_attack(ticks))
+                    else:
+                        self.super_attacks[self.player.uuid] = [self.player.super_attack(ticks)]
+                    super_charge = 0
+            self.super.scale_bar(super_charge)
 
         else:
             # if the player is not alive, we need to make sure their particles are updated/ culled
@@ -299,20 +316,34 @@ class Scene:
             keys = pg.key.get_pressed()
             if keys[pg.K_SPACE]: # pylint: disable=no-member
                 self.player.respawn(self.bounds.center)
+                self.player.last_super = ticks
                 self.player.add(self.all_sprites)
-                self.hp.scale_bar(100)
+                self.hp.scale_bar(1)
+                self.super.scale_bar(0)
                 self.score = 0
                 self.last_spawn = ticks
 
+        # Update all our super attacks # pylint: disable=consider-using-dict-items
+        for key in self.super_attacks:
+            for p in self.super_attacks[key]:
+                p.update(dt)
+                if p.triggered: # Check if the super has triggered and is damaging
+                    for sub in p.sub_particles: # Check if the sub particles hit us/ enemies
+                        self.check_attacks(sub, 25, self.enemies)
+                        self.check_attacks(sub, 25, [self.player])
+                    p.sub_particles = [sub for sub in p.sub_particles if not sub.has_expired]
+            self.super_attacks[key] = [p for p in self.super_attacks[key]if not p.has_expired]
+        # pylint: enable=consider-using-dict-items
+
         # Check if any of our attacks hit, kill enmies that are hit,
         # and remove the particle that killed them
-        for p in self.player.particles:
+        for particle in self.player.particles:
             try:
-                enemies = getattr(p, 'sub_particles')
-                for e in enemies:
-                    self.check_attacks(e, self.player.attacks.power, self.enemies)
+                sub_particles = getattr(particle, 'sub_particles')
+                for p in sub_particles:
+                    self.check_attacks(p, self.player.attacks.power, self.enemies)
             except AttributeError:
-                self.check_attacks(p, self.player.attacks.power, self.enemies)
+                self.check_attacks(particle, self.player.attacks.power, self.enemies)
 
         self.scoreboard.update_scores({App.config('name'): self.score})
         for e in self.enemies:
@@ -330,17 +361,29 @@ class Scene:
 
         collisions: list[Enemy] = pg.sprite.spritecollide(self.player, self.enemies, False)
         for collide in collisions:
-            self.player.current_hp -= collide.power
-            if self.player.current_hp <= 0:
-                self.player.kill()
-                self.hp.scale_bar(0)
-                # logger.debug(self.player)
-            else:
-                self.hp.scale_bar(self.player.current_hp / self.player.max_hp)
-                self.player.gain_innertia(pg.Vector2(collide.rect.center))
+            self.damage_player(collide.power, collide.rect.center)
 
         if self.client is not None:
             self.net_update(dt)
+
+    def damage_player(self, power: int, collision_center: tuple[int,int]):
+        """Damage the player after collision
+
+        Parameters
+        ----------
+        power : int
+            Power of the attack that hit the player
+        collision_center : tuple[int,int]
+            location of the center of the collision
+        """
+        self.player.current_hp -= power
+        if self.player.current_hp <= 0:
+            self.player.kill()
+            self.hp.scale_bar(0)
+            # logger.debug(self.player)
+        else:
+            self.hp.scale_bar(self.player.current_hp / self.player.max_hp)
+            self.player.gain_innertia(pg.Vector2(collision_center))
 
     def net_update(self, dt: float):
         """Process updates from a network server
@@ -386,7 +429,7 @@ class Scene:
         self.client.send(msg)
 
     def check_attacks(self, attack: pg.sprite.Sprite, attack_pwr: int,
-                            targets: Group):
+                            targets: Group|list[Player]):
         """Check if an attack (normally a particle or sub particle) hiss an target (normally a 
         sprite group of enemies)
 
@@ -401,11 +444,17 @@ class Scene:
         """
         hit: Group[Enemy|Player] = pg.sprite.spritecollide(attack, targets, False)
         for h in hit:
-            h.current_hp -= attack_pwr
-            if h.current_hp <= 0:
-                h.kill()
-                self.score += h.max_hp
-                self.dead_sprites.add(h)
+            if isinstance(h, Enemy):
+                h.current_hp -= attack_pwr
+                if h.current_hp <= 0:
+                    h.kill()
+                    self.score += h.max_hp
+                    self.dead_sprites.add(h)
+            elif isinstance(h, Player):
+                self.damage_player(attack_pwr,attack.rect.center)
+            else:
+                logger.error('Scene:check_attacks: Collision between %s and %s, but %s is not'
+                                ' a player or enemy', attack, h, h)
         if len(hit):
             attack.has_expired = True
 
@@ -484,3 +533,6 @@ class Scene:
         for p in self.player.particles:
             p.draw(screen)
         self.hud.draw(screen)
+        for s in self.super_attacks.values():
+            for p in s:
+                p.draw(screen)
