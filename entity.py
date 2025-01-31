@@ -256,7 +256,10 @@ class Player(Entity):
         self.particles: list[Particle] = []
         self.last_attack: int = 0
         self.attacks = BaseAttack()
-        self.super =BaseAttack(base_particle=Explosion(self.rect, pg.Vector2(0,0), 'Yellow'),
+        self.last_super: int = 0
+        self.super_ability =BaseAttack(base_particle=Explosion(self.rect,
+                                                                pg.Vector2(0,0),
+                                                                'Red'),
                                     max_velocity=0, interval=5000)
 
     def attack(self, target: pg.Vector2, ticks: int):
@@ -265,7 +268,7 @@ class Player(Entity):
         Parameters
         ----------
         target : pg.Vector2
-            target to fire att
+            target to fire at
         ticks : int
             global tick count at the start of the frame update for tracking attack times
         """
@@ -273,6 +276,24 @@ class Player(Entity):
         direction = (target - pg.Vector2(self.rect.center)).normalize()
         direction *= self.attacks.max_velocity
         self.particles.append(self.attacks.particle.reset(pg.Rect(self.rect),direction))
+
+    def super_attack(self, ticks: int, target: pg.Vector2|None=None):
+        """Create a new particle for the players "Attack"
+
+        Parameters
+        ----------
+        ticks : int
+            global tick count at the start of the frame update for tracking attack times
+        target : pg.Vector2|None
+            target to fire at, or None for undirected, by default None
+        """
+        self.last_super = ticks
+        if target:
+            direction = (target - pg.Vector2(self.rect.center)).normalize()
+            direction *= self.attacks.max_velocity
+        else:
+            direction = pg.Vector2(0,0)
+        return self.super_ability.particle.reset(pg.Rect(self.rect),direction)
 
     def update(self, bounds: pg.Rect=None, dt: float=None):
         """Update the player movement, before passing to the parent class to update animation
