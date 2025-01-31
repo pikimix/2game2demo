@@ -85,8 +85,8 @@ class Explosion(Particle):
     """Basic particle for explosion
     """
     def __init__(self, rect: pg.Rect, velocity: pg.Vector2,
-                    color: pg.Color=pg.Color('White'), lifetime: int=600,
-                    windup: int=500, radius: int=50, explosion_speed: int=400):
+                    color: pg.Color=pg.Color('White'), lifetime: int=1250,
+                    windup: int=750, radius: int=100, explosion_speed: int=400, decay: float=0.95):
         """Create new explosion particle with given details
 
         Parameters
@@ -98,15 +98,18 @@ class Explosion(Particle):
         color : pg.Color, optional
             color to draw the particle, by default pg.Color('White')
         lifetime : int, optional
-            how long the particle will be alive, by default 110
+            how long the particle will be alive, by default 1250
         windup : int, optional
             how long it takes in ms before the explosion happens
-            , by default 500
+            , by default 750
         radius : int, optional
-            radius of the explosion marker, by default 50
+            radius of the explosion marker, by default 100
         explosion_speed : int
-            Average speed the explosion propagates, each particle is between 1/4 and 4x this
+            Average speed the explosion propagates, each particle is between 1/4 and 3x this
             value, by default 400
+        decay : float
+            The percentage multiplier for how much sub particles slow down by each frame,
+            by default 0.95
         """
         super().__init__(rect, velocity, color, lifetime)
         self.rect.width = radius*2
@@ -115,8 +118,10 @@ class Explosion(Particle):
         self.windup = windup
         self.inner_scale = 0
         self.radius = radius
-        self.sub_particles = []
+        self.sub_particles: list[Particle] = []
         self.explosion_speed = explosion_speed
+        self.triggered = False
+        self.decay = decay
 
     def reset(self, rect, velocity):
         self.sub_particles = []
@@ -127,20 +132,24 @@ class Explosion(Particle):
         super().update(dt)
         ticks = pg.time.get_ticks()
         if self.spawn_time + self.windup < ticks:
+            self.triggered = True
             if self.sub_particles == []:
                 self.inner_scale = 0
                 for x in range(0,360):
-                    speed = randint(self.explosion_speed/4, self.explosion_speed*4)
+                    speed = randint(self.explosion_speed/4, self.explosion_speed*3)
                     p = Particle(self.rect.copy(),
                                 pg.Vector2.from_polar((speed, x)),
                                 'Red', self.lifetime - self.windup)
                     self.sub_particles.append(p)
             for p in self.sub_particles:
+                if p.velocity.magnitude() > self.explosion_speed/4:
+                    p.velocity *= self.decay
                 p.update(dt)
             self.sub_particles = [p
                                 for p in self.sub_particles
                                 if not p.has_expired]
         else:
+            self.triggered = False
             self.inner_scale = (ticks - self.spawn_time) / self.windup
 
     def draw(self, screen):
