@@ -2,6 +2,7 @@
 """
 from __future__ import annotations
 import copy
+from random import randint
 import pygame as pg
 
 class Particle:
@@ -85,7 +86,7 @@ class Explosion(Particle):
     """
     def __init__(self, rect: pg.Rect, velocity: pg.Vector2,
                     color: pg.Color=pg.Color('White'), lifetime: int=600,
-                    windup: int=500, radius: int=50, explosion_speed: int=1200):
+                    windup: int=500, radius: int=50, explosion_speed: int=400):
         """Create new explosion particle with given details
 
         Parameters
@@ -104,7 +105,8 @@ class Explosion(Particle):
         radius : int, optional
             radius of the explosion marker, by default 50
         explosion_speed : int
-            Speed the explosion propagates, by default 1200
+            Average speed the explosion propagates, each particle is between 1/4 and 4x this
+            value, by default 400
         """
         super().__init__(rect, velocity, color, lifetime)
         self.rect.width = radius*2
@@ -128,14 +130,13 @@ class Explosion(Particle):
             if self.sub_particles == []:
                 self.inner_scale = 0
                 for x in range(0,360):
+                    speed = randint(self.explosion_speed/4, self.explosion_speed*4)
                     p = Particle(self.rect.copy(),
-                                pg.Vector2.from_polar((self.explosion_speed, x)),
+                                pg.Vector2.from_polar((speed, x)),
                                 'Red', self.lifetime - self.windup)
                     self.sub_particles.append(p)
-
             for p in self.sub_particles:
                 p.update(dt)
-
             self.sub_particles = [p
                                 for p in self.sub_particles
                                 if not p.has_expired]
