@@ -70,6 +70,29 @@ class Entity(pg.sprite.DirtySprite):
         #
         #####
 
+    def serialize(self) -> dict[str,str|tuple[int]|list[int]]:
+        """Serialize the key componants of this entity.
+
+        Returns
+        -------
+        dict[str,str|tuple[int]|list[int]]
+            dict representing this entity
+        """
+        serialized = {}
+        for key, value in vars(self).items():
+            match key:
+                case 'uuid':
+                    serialized['uuid'] = str(value)
+                case 'rect':
+                    serialized['position'] = value.topleft
+                case x if x in ['velocity', 'innertia_vector']:
+                    serialized[key] = [value.x, value.y]
+                case 'innertia_scaler':
+                    serialized['innertia_scaler'] = value
+                case _:
+                    pass
+        return serialized
+
     def load_sprite(self, sprite_details: dict[str,str|int]):
         """Load a sprite from a file
 
