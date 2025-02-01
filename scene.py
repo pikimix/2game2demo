@@ -145,7 +145,7 @@ class Scene:
 
         # Create enemies for use later
         for _ in range(2001):
-            enemy = Enemy(self.spawn_outside(), self.sprite)
+            enemy = Enemy((-100,-100), self.sprite)
             self.dead_sprites.add(enemy)
         # Make all the enemies red
         for enemy in self.dead_sprites:
