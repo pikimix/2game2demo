@@ -8,6 +8,7 @@ import pygame as pg
 from pygame.sprite import Group, LayeredDirty
 import yaml
 from app import App
+from gamestate import Gamestate
 from entity import Enemy, Ghost, Player
 from hud import Bar, Scoreboard, Text
 from network import Client
@@ -116,7 +117,6 @@ class EnemyPattern:
                     eps.append(EnemyPattern.create_from_dict(pattern))
             return eps
 
-
 class Scene:
     """A scene (or "level") of the game
     """
@@ -138,11 +138,9 @@ class Scene:
             'height': 32,
             'frames': 4
         }
-        self.player: Player = Player(bounds.center, self.sprite)
+        Gamestate.player = Player(bounds.center, self.sprite)
         self.all_sprites: LayeredDirty[Enemy|Ghost|Player] = LayeredDirty()
-        self.enemies: Group[Enemy] = Group()
         self.dead_sprites: Group[Enemy|Ghost|Player] = Group()
-        self.ghosts: Group[Ghost] = Group()
         self.super_attacks: dict[str,list[Explosion|Particle]] = {}
 
         # Create enemies for use later
@@ -153,7 +151,7 @@ class Scene:
         for enemy in self.dead_sprites:
             enemy.tint('Red')
 
-        self.all_sprites.add(self.player, layer=2)
+        self.all_sprites.add(Gamestate.player, layer=2)
         self.spawn_patterns = []
         if enemy_pattern_yml is not None:
             self.spawn_patterns = EnemyPattern.load_from_file(enemy_pattern_yml)
@@ -195,7 +193,7 @@ class Scene:
             port = 8080 if not App.config('port') else App.config('port')
             self.client = Client(url, port)
             self.client.start()
-            self.client.send({'uuid':str(self.player.uuid), 'time': time.time()})
+            self.client.send({'uuid':str(Gamestate.player.uuid), 'time': time.time()})
             logger.debug(self.client)
 
     def spawn_outside(self, direction: str='any') -> tuple[int, int]:
@@ -278,46 +276,46 @@ class Scene:
         """
         ticks = pg.time.get_ticks()
 
-        if self.player.alive():
+        if Gamestate.player.alive():
             # Check if the player needs to attack, then fire one off if there are enemies
-            if self.player.last_attack + self.player.attacks.interval < ticks:
+            if Gamestate.player.last_attack + Gamestate.player.attacks.interval < ticks:
                 enemy = None
-                if len(self.enemies) > 1:
-                    enemy = min([e for e in self.enemies.sprites()],
-                                key=lambda e: pow(e.rect.x-self.player.rect.x, 2)
-                                            + pow(e.rect.y-self.player.rect.y, 2))
-                elif len(self.enemies) == 1:
-                    enemy = self.enemies.sprites()[0]
+                if len(Gamestate.enemies) > 1:
+                    enemy = min([e for e in Gamestate.enemies.sprites()],
+                                key=lambda e: pow(e.rect.x-Gamestate.player.rect.x, 2)
+                                            + pow(e.rect.y-Gamestate.player.rect.y, 2))
+                elif len(Gamestate.enemies) == 1:
+                    enemy = Gamestate.enemies.sprites()[0]
                 if enemy is not None:
-                    self.player.attack(pg.Vector2(enemy.rect.center), ticks)
+                    Gamestate.player.attack(pg.Vector2(enemy.rect.center), ticks)
 
-            self.player.update(self.bounds, dt)
+            Gamestate.player.update(self.bounds, dt)
             # Check if the player can/ has triggered super
-            super_charge = (ticks - self.player.last_super)/  self.player.super_ability.interval
+            super_charge = (ticks - Gamestate.player.last_super)/  Gamestate.player.super_ability.interval
             if super_charge > 1:
                 super_charge = 1
                 keys = pg.key.get_pressed()
                 if keys[pg.K_SPACE]: # pylint: disable=no-member
-                    if self.player.uuid in self.super_attacks:
-                        self.super_attacks[self.player.uuid].append(
-                            self.player.super_attack(ticks))
+                    if Gamestate.player.uuid in self.super_attacks:
+                        self.super_attacks[Gamestate.player.uuid].append(
+                            Gamestate.player.super_attack(ticks))
                     else:
-                        self.super_attacks[self.player.uuid] = [self.player.super_attack(ticks)]
+                        self.super_attacks[Gamestate.player.uuid] = [Gamestate.player.super_attack(ticks)]
                     super_charge = 0
             self.super.scale_bar(super_charge)
 
         else:
             # if the player is not alive, we need to make sure their particles are updated/ culled
-            for p in self.player.particles:
+            for p in Gamestate.player.particles:
                 p.update(dt)
-            self.player.particles = [p
-                                    for p in self.player.particles
+            Gamestate.player.particles = [p
+                                    for p in Gamestate.player.particles
                                     if not p.has_expired]
             keys = pg.key.get_pressed()
             if keys[pg.K_SPACE]: # pylint: disable=no-member
-                self.player.respawn(self.bounds.center)
-                self.player.last_super = ticks
-                self.player.add(self.all_sprites)
+                Gamestate.player.respawn(self.bounds.center)
+                Gamestate.player.last_super = ticks
+                Gamestate.player.add(self.all_sprites)
                 self.hp.scale_bar(1)
                 self.super.scale_bar(0)
                 self.score = 0
@@ -329,24 +327,24 @@ class Scene:
                 p.update(dt)
                 if p.triggered: # Check if the super has triggered and is damaging
                     for sub in p.sub_particles: # Check if the sub particles hit us/ enemies
-                        self.check_attacks(sub, 25, self.enemies)
-                        self.check_attacks(sub, 25, [self.player])
+                        self.check_attacks(sub, 25, Gamestate.enemies)
+                        self.check_attacks(sub, 25, [Gamestate.player])
                     p.sub_particles = [sub for sub in p.sub_particles if not sub.has_expired]
             self.super_attacks[key] = [p for p in self.super_attacks[key]if not p.has_expired]
         # pylint: enable=consider-using-dict-items
 
         # Check if any of our attacks hit, kill enmies that are hit,
         # and remove the particle that killed them
-        for particle in self.player.particles:
+        for particle in Gamestate.player.particles:
             try:
                 sub_particles = getattr(particle, 'sub_particles')
                 for p in sub_particles:
-                    self.check_attacks(p, self.player.attacks.power, self.enemies)
+                    self.check_attacks(p, Gamestate.player.attacks.power, Gamestate.enemies)
             except AttributeError:
-                self.check_attacks(particle, self.player.attacks.power, self.enemies)
+                self.check_attacks(particle, Gamestate.player.attacks.power, Gamestate.enemies)
 
         self.scoreboard.update_scores({App.config('name'): self.score})
-        for e in self.enemies:
+        for e in Gamestate.enemies:
             e.update(dt)
             if not self.bounds.colliderect(e.rect):
                 if e.has_been_onscreen:
@@ -355,11 +353,11 @@ class Scene:
             elif not e.has_been_onscreen:
                 e.has_been_onscreen = True
 
-        if self.last_spawn + self.spaw_timeout < ticks and self.player.alive():
+        if self.last_spawn + self.spaw_timeout < ticks and Gamestate.player.alive():
             self.spawn_enemies(random.choice(self.spawn_patterns))
             self.last_spawn = ticks
 
-        collisions: list[Enemy] = pg.sprite.spritecollide(self.player, self.enemies, False)
+        collisions: list[Enemy] = pg.sprite.spritecollide(Gamestate.player, Gamestate.enemies, False)
         for collide in collisions:
             self.damage_player(collide.power, collide.rect.center)
 
@@ -376,14 +374,14 @@ class Scene:
         collision_center : tuple[int,int]
             location of the center of the collision
         """
-        self.player.current_hp -= power
-        if self.player.current_hp <= 0:
-            self.player.kill()
+        Gamestate.player.current_hp -= power
+        if Gamestate.player.current_hp <= 0:
+            Gamestate.player.kill()
             self.hp.scale_bar(0)
-            # logger.debug(self.player)
+            # logger.debug(Gamestate.player)
         else:
-            self.hp.scale_bar(self.player.current_hp / self.player.max_hp)
-            self.player.gain_innertia(pg.Vector2(collision_center))
+            self.hp.scale_bar(Gamestate.player.current_hp / Gamestate.player.max_hp)
+            Gamestate.player.gain_innertia(pg.Vector2(collision_center))
 
     def net_update(self, dt: float):
         """Process updates from a network server
@@ -395,37 +393,17 @@ class Scene:
         """
         # This can probably be cleaned up
         # Update local ghosts
-        self.ghosts.update(dt=dt)
+        Gamestate.ghosts.update(dt=dt)
         for update in self.client.get_messages():
-            logger.debug('Scene.update: processing %s network updates', len(update))
-            for ruuid, values in update.items():
-                if ruuid == 'offset' or ruuid == str(self.player.uuid):
-                    continue
-                uuid_found = False
-                for sprite in self.ghosts:
-                    if str(sprite.uuid) == ruuid:
-                        uuid_found = True
-                        sprite.net_update(values)
-                if not uuid_found:
-                    g = Ghost((0,0), self.sprite, euuid=ruuid)
-                    g.net_update(values)
-                    self.ghosts.add(g)
-                    self.all_sprites.add(g)
+            Gamestate.update_net(update)
+            self.all_sprites.add(Gamestate.ghosts)
+            # for g in Gamestate.update_net(update):
+                # self.all_sprites.add(g)
+
 
         # end by sending out update
-        msg = {'time': time.time()}
-        for key, value in vars(self.player).items():
-            match key:
-                case 'uuid':
-                    msg['uuid'] = str(value)
-                case 'rect':
-                    msg['position'] = value.topleft
-                case x if x in ['velocity', 'innertia_vector']:
-                    msg[key] = [value.x, value.y]
-                case 'innertia_scaler':
-                    msg['innertia_scaler'] = value
-                case _:
-                    pass
+        msg = Gamestate.serialize()
+        msg['time'] = time.time()
         self.client.send(msg)
 
     def check_attacks(self, attack: pg.sprite.Sprite, attack_pwr: int,
@@ -494,7 +472,7 @@ class Scene:
                     d.respawn(self.spawn_outside(pattern.spawn_type))
                     self.spawn_target(d, pattern)
                 spawned.append(d.rect)
-                d.add(self.enemies)
+                d.add(Gamestate.enemies)
                 self.all_sprites.add(d, layer=1)
                 if len(spawned) >= pattern.number_of_enemies:
                     break
@@ -519,7 +497,7 @@ class Scene:
                 if pattern.target_direction:
                     enemy.set_direction(pattern.target_direction)
                 else:
-                    enemy.move_towards(self.player.rect.center)
+                    enemy.move_towards(Gamestate.player.rect.center)
 
     def draw(self, screen: pg.Surface):
         """Draw the current scene to the provided screen
@@ -530,7 +508,7 @@ class Scene:
             SCreen or surface to draw the scene too.
         """
         self.all_sprites.draw(screen)
-        for p in self.player.particles:
+        for p in Gamestate.player.particles:
             p.draw(screen)
         self.hud.draw(screen)
         for s in self.super_attacks.values():
