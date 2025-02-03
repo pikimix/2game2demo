@@ -2,15 +2,15 @@
 """
 from __future__ import annotations
 import copy
+import time
 from random import randint
 import pygame as pg
-
 class Particle:
     """Simple particle with a Position (rect), direction (velocity), color and lifetime
     """
 
-    def __init__(self, rect: pg.Rect, velocity: pg.Vector2,
-                    color: pg.Color=pg.Color('White'), lifetime: int=100):
+    def __init__(self, rect: pg.Rect, velocity: pg.Vector2, color: pg.Color=pg.Color('White'), 
+                    lifetime: int=100, spawn_time: int|None=None):
         """Create new particle with given details
 
         Parameters
@@ -23,6 +23,8 @@ class Particle:
             color to draw the particle, by default pg.Color('White')
         lifetime : int, optional
             how long the particle will be alive, by default 100
+        spawn_time: int|None
+            time this particle was spawned, None handled by getting current time.time, default None
         """
         self.last_pos= rect.center
         self.rect = pg.Rect(0,0,10,10)
@@ -32,8 +34,38 @@ class Particle:
         # self.image = pg.Surface((10, 10), pg.SRCALPHA)# pylint: disable=no-member
         # pg.draw.circle(self.image, color, (10,10), radius=10)
         self.has_expired = False
-        self.spawn_time = pg.time.get_ticks()
+        self.spawn_time = time.time() * 1000
+        if spawn_time is not None:
+            self.spawn_time = spawn_time
         self.lifetime = lifetime
+
+    def serialize(self) -> dict:
+        """Serialize the particle to be re-created
+
+        Returns
+        -------
+        dict
+            dictionary representing this particle
+        """
+        print(self.color)
+        serialized = {'type': 'particle'}
+        for key, value in vars(self).items():
+            match key:
+                case 'rect':
+                    serialized['position'] = value.center
+                case 'velocity':
+                    serialized['velocity'] = [value.x, value.y]
+                case 'color':
+                    serialized['color'] =(self.color.r,
+                                            self.color.g,
+                                            self.color.b,
+                                            self.color.a)
+                case x if x in ['spawn_time','lifetime', 'windup', 'radius', 'explosion_speed',
+                                'decay',]:
+                    serialized[key] = value
+                case _:
+                    pass
+        return serialized
 
     def reset(self, rect: pg.Rect, velocity: pg.Vector2) -> Particle:
         """Returns a reset copy of this particle
@@ -54,7 +86,7 @@ class Particle:
         self.last_pos= rect.center
         self.velocity = velocity
         self.has_expired = False
-        self.spawn_time = pg.time.get_ticks()
+        self.spawn_time = time.time() * 1000
         return copy.deepcopy(self)
 
     def update(self, dt:float):
@@ -65,7 +97,7 @@ class Particle:
         dt : float
             Time that has elapsed since the last frame
         """
-        if self.spawn_time + self.lifetime < pg.time.get_ticks():
+        if self.spawn_time + self.lifetime < time.time() * 1000:
             self.has_expired = True
         else:
             self.last_pos = self.rect.center
@@ -84,8 +116,8 @@ class Particle:
 class Explosion(Particle):
     """Basic particle for explosion
     """
-    def __init__(self, rect: pg.Rect, velocity: pg.Vector2,
-                    color: pg.Color=pg.Color('White'), lifetime: int=1250,
+    def __init__(self, rect: pg.Rect, velocity: pg.Vector2, color: pg.Color=pg.Color('White'),
+                    lifetime: int=1250, spawn_time: int|None=None,
                     windup: int=750, radius: int=100, explosion_speed: int=400, decay: float=0.95):
         """Create new explosion particle with given details
 
@@ -99,6 +131,8 @@ class Explosion(Particle):
             color to draw the particle, by default pg.Color('White')
         lifetime : int, optional
             how long the particle will be alive, by default 1250
+        spawn_time: int|None
+            time this particle was spawned, None handled by getting current time.time, default None
         windup : int, optional
             how long it takes in ms before the explosion happens
             , by default 750
@@ -111,7 +145,7 @@ class Explosion(Particle):
             The percentage multiplier for how much sub particles slow down by each frame,
             by default 0.95
         """
-        super().__init__(rect, velocity, color, lifetime)
+        super().__init__(rect, velocity, color, lifetime, spawn_time)
         self.rect.width = radius*2
         self.rect.height = radius*2
         self.rect.center = rect.center
@@ -123,6 +157,11 @@ class Explosion(Particle):
         self.triggered = False
         self.decay = decay
 
+    def serialize(self):
+        serialized = super().serialize()
+        serialized['type'] = 'explosion'
+        return serialized
+
     def reset(self, rect, velocity):
         self.sub_particles = []
         self.inner_scale = 0
@@ -130,7 +169,7 @@ class Explosion(Particle):
 
     def update(self, dt):
         super().update(dt)
-        ticks = pg.time.get_ticks()
+        ticks = time.time() * 1000
         if self.spawn_time + self.windup < ticks:
             self.triggered = True
             if self.sub_particles == []:
