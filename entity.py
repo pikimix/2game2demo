@@ -298,7 +298,7 @@ class Player(Entity):
         self.last_super: int = 0
         self.super_ability =BaseAttack(base_particle=Explosion(self.rect,
                                                                 pg.Vector2(0,0),
-                                                                'Red'),
+                                                                pg.Color('Red')),
                                     max_velocity=0, interval=5000)
 
     def attack(self, target: pg.Vector2, ticks: int):

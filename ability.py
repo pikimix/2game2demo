@@ -32,4 +32,4 @@ class BaseAttack:
         self.max_velocity = max_velocity
         self.particle = base_particle if base_particle else particle.Particle(pg.Rect(0,0,1,1),
                                                                     pg.Vector2(0,0),
-                                                                    'Yellow', 1000)
+                                                                    pg.Color('Yellow'), 1000)
