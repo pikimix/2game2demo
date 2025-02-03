@@ -71,7 +71,7 @@ clock: pg.time.Clock = pg.time.Clock()
 running: bool = True
 dt: int = 0
 
-scene = Scene(_screen.get_rect(), 'assets/spawns/default.yml')
+scene = Scene(_screen.get_rect(), 'assets/spawns/easy.yml')
 
 while running:
     # poll for events
