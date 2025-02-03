@@ -224,7 +224,22 @@ class Ghost(Entity):
     """
 
     def __init__(self, origin: tuple[int, int], sprite_details: dict[str,str|int]|None,
-                    velocity: pg.Vector2=pg.Vector2(0,0), euuid: uuid.uuid4=None):
+                    velocity: pg.Vector2=pg.Vector2(0,0), euuid: uuid.uuid4=None, name: str=""):
+        """Create Network Ghost entity
+
+        Parameters
+        ----------
+        origin : tuple[int, int]
+            location where the entity gets spwaned
+        sprite_details : dict[str,str | int]
+            details of the sprite to be drawn
+        velocity : pg.Vector2, optional
+            Current Velocity of the Ghost, by default pg.Vector2(0,0)
+        euuid : uuid.uuid4, optional
+            UUID of the ghost, by default None
+        name : str, optional
+            Name given to the ghost by its player, by default ""
+        """
         super().__init__(origin, sprite_details, euuid)
         self.velocity = velocity
         self.tint((128,128,128,128))
@@ -233,6 +248,7 @@ class Ghost(Entity):
         self.lifetime = random.randint(1000, 10000)
         self.hidden_for = 0
         self.hidden = False
+        self.name = name
 
     def update(self, dt: float=None):
         """Update the ghosts position based on its last known velocity
