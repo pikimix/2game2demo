@@ -1,0 +1,44 @@
+---
+  # default spawn
+- number_of_enemies: 10
+  spawn_type: 'any'
+
+  # Squads
+- number_of_enemies: 20
+  spawn_type: 'left'
+  has_leader: True
+- number_of_enemies: 20
+  spawn_type: 'bottom'
+  has_leader: True
+  distance: 200
+- number_of_enemies: 20
+  spawn_type: 'top'
+  has_leader: True
+  distance: 200
+  target_direction: 
+  - 0
+  - 1
+- number_of_enemies: 20
+  spawn_type: 'right'
+  has_leader: True
+  distance: 50
+- number_of_enemies: 20
+  spawn_type: 'right'
+  has_leader: True
+  target_direction: 
+  - 1
+  - 0
+
+  # Center rushers
+- number_of_enemies: 100
+  spawn_type: 'top'
+  target: bounds.center
+- number_of_enemies: 100
+  spawn_type: 'bottom'
+  target: bounds.center
+- number_of_enemies: 100
+  spawn_type: 'left'
+  target: bounds.center
+- number_of_enemies: 100
+  spawn_type: 'right'
+  target: bounds.center
