@@ -63,7 +63,7 @@ class Server:
         initial_message = await websocket.recv()
         data:dict = json.loads(initial_message)
         client_id = data.get("uuid")
-        client_offset = time.time() - data.get('time',0)
+        client_offset = (time.time() * 1000) - data.get('time',0)
         if not client_id:
             logger.error("No UUID provided by client. Closing connection.")
             await websocket.close()

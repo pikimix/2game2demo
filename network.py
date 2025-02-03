@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
     # Sending a test message
     my_uuid = uuid.uuid4()
-    client.send({'uuid':str(my_uuid), 'time': time.time()})
+    client.send({'uuid':str(my_uuid), 'time': (time.time() * 1000)})
 
     client.send({'pos':(0,0)})
 
