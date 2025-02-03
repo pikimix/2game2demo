@@ -3,6 +3,7 @@
 from __future__ import annotations # To make type hinting work when using certain classes
 import logging
 from pygame.sprite import Group
+from app import App
 from entity import Enemy, Entity, Ghost, Player
 
 logger = logging.getLogger(__name__)
@@ -26,8 +27,12 @@ class Gamestate:
 
         Currently serializes:
             Gamestate.player
+            Gamestate.score[PlayerName]
         """
-        return Gamestate.player.serialize()
+        gamestate = Gamestate.player.serialize()
+        gamestate['name'] = App.config('name')
+        gamestate['score'] = Gamestate.score[App.config('name')]
+        return gamestate
 
     @staticmethod
     def update_net(update: dict):
@@ -48,6 +53,8 @@ class Gamestate:
             if ruuid == 'offset' or ruuid == str(Gamestate.player.uuid):
                 continue
             uuid_found = False
+            if 'score' in values:
+                Gamestate.score[values['name']] = values['score']
             for sprite in Gamestate.ghosts:
                 if str(sprite.uuid) == ruuid:
                     uuid_found = True
