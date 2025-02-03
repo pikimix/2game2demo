@@ -141,7 +141,7 @@ class Scene:
         Gamestate.player = Player(bounds.center, self.sprite)
         self.all_sprites: LayeredDirty[Enemy|Ghost|Player] = LayeredDirty()
         self.dead_sprites: Group[Enemy|Ghost|Player] = Group()
-        self.super_attacks: dict[str,list[Explosion|Particle]] = {}
+        Gamestate.super_attacks: dict[str,list[Explosion|Particle]] = {}
 
         # Create enemies for use later
         for _ in range(2001):
@@ -296,11 +296,12 @@ class Scene:
                 super_charge = 1
                 keys = pg.key.get_pressed()
                 if keys[pg.K_SPACE]: # pylint: disable=no-member
-                    if Gamestate.player.uuid in self.super_attacks:
-                        self.super_attacks[Gamestate.player.uuid].append(
-                            Gamestate.player.super_attack(ticks))
+                    new_super = Gamestate.player.super_attack(ticks)
+                    Gamestate.new_supers.append(new_super)
+                    if Gamestate.player.uuid in Gamestate.super_attacks:
+                        Gamestate.super_attacks[Gamestate.player.uuid].append(new_super)
                     else:
-                        self.super_attacks[Gamestate.player.uuid] = [Gamestate.player.super_attack(ticks)]
+                        Gamestate.super_attacks[Gamestate.player.uuid] = [new_super]
                     super_charge = 0
             self.super.scale_bar(super_charge)
 
@@ -322,15 +323,15 @@ class Scene:
                 self.last_spawn = ticks
 
         # Update all our super attacks # pylint: disable=consider-using-dict-items
-        for key in self.super_attacks:
-            for p in self.super_attacks[key]:
+        for key in Gamestate.super_attacks:
+            for p in Gamestate.super_attacks[key]:
                 p.update(dt)
                 if p.triggered: # Check if the super has triggered and is damaging
                     for sub in p.sub_particles: # Check if the sub particles hit us/ enemies
                         self.check_attacks(sub, 25, Gamestate.enemies)
                         self.check_attacks(sub, 25, [Gamestate.player])
                     p.sub_particles = [sub for sub in p.sub_particles if not sub.has_expired]
-            self.super_attacks[key] = [p for p in self.super_attacks[key]if not p.has_expired]
+            Gamestate.super_attacks[key] = [p for p in Gamestate.super_attacks[key]if not p.has_expired]
         # pylint: enable=consider-using-dict-items
 
         # Check if any of our attacks hit, kill enmies that are hit,
@@ -511,6 +512,6 @@ class Scene:
         for p in Gamestate.player.particles:
             p.draw(screen)
         self.hud.draw(screen)
-        for s in self.super_attacks.values():
+        for s in Gamestate.super_attacks.values():
             for p in s:
                 p.draw(screen)
