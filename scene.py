@@ -178,7 +178,7 @@ class Scene:
         self.super = Bar(pg.Rect(self.bounds.centerx,self.bounds.bottom-20, 100,20), color='Blue')
         self.super_label = Text(pg.Rect(self.bounds.centerx,self.bounds.bottom-40, 40,20), "SUPER")
         self.scoreboard = Scoreboard((10,10,0,0), {App.config('name'):0})
-        self.score = 0
+        Gamestate.score[App.config('name')] = 0
         self.hud = Group(self.hp, self.hp_label, self.super, self.super_label, self.scoreboard)
         #
         #####
@@ -318,7 +318,7 @@ class Scene:
                 Gamestate.player.add(self.all_sprites)
                 self.hp.scale_bar(1)
                 self.super.scale_bar(0)
-                self.score = 0
+                Gamestate.score[App.config('name')] = 0
                 self.last_spawn = ticks
 
         # Update all our super attacks # pylint: disable=consider-using-dict-items
@@ -343,7 +343,7 @@ class Scene:
             except AttributeError:
                 self.check_attacks(particle, Gamestate.player.attacks.power, Gamestate.enemies)
 
-        self.scoreboard.update_scores({App.config('name'): self.score})
+        self.scoreboard.update_scores(Gamestate.score)
         for e in Gamestate.enemies:
             e.update(dt)
             if not self.bounds.colliderect(e.rect):
@@ -426,7 +426,7 @@ class Scene:
                 h.current_hp -= attack_pwr
                 if h.current_hp <= 0:
                     h.kill()
-                    self.score += h.max_hp
+                    Gamestate.score[App.config('name')] += h.max_hp
                     self.dead_sprites.add(h)
             elif isinstance(h, Player):
                 self.damage_player(attack_pwr,attack.rect.center)
