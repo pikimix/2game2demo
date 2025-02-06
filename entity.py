@@ -6,7 +6,7 @@ import uuid
 import pygame as pg
 from particle import Particle, Explosion
 from ability import BaseAttack
-
+from app import App
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=0)
@@ -283,6 +283,20 @@ class Ghost(Entity):
             self.visible = 1
             self.change_time = pg.time.get_ticks()
 
+    def draw_nameplate(self, surface: pg.Surface):
+        """Draw the nameplate for the ghost, if it is visible
+
+        Parameters
+        ----------
+        surface : pg.Surface
+            Surface to draw the nameplate on
+        """
+        if self.visible:
+            font: pg.font.Font = App.config('font18')
+            nameplate = font.render(self.name, True, 'Black')
+            pos_x = self.rect.centerx - (nameplate.get_width() / 2)
+            pos_y = self.rect.bottom
+            surface.blit(nameplate,(pos_x, pos_y))
 
 class Player(Entity):
     """A locally controllable player extension to the entity class
