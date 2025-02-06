@@ -59,7 +59,7 @@ class Gamestate:
         """
         logger.debug('Scene.update: processing %s network updates', len(update))
         for ruuid, values in update.items():
-            logger.info(values)
+            logger.debug(values)
             if ruuid == str(Gamestate.player.uuid):
                 continue
             elif ruuid == 'offset':
@@ -68,7 +68,7 @@ class Gamestate:
             uuid_found = False
             if 'score' in values:
                 Gamestate.score[values['name']] = values['score']
-                logger.info(Gamestate.score)
+                logger.debug(Gamestate.score)
             for sprite in Gamestate.ghosts:
                 if str(sprite.uuid) == ruuid:
                     uuid_found = True
