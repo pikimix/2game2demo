@@ -23,6 +23,7 @@ class Gamestate:
     enemies: Group[Enemy] = Group()
     ghosts: Group[Ghost] = Group()
     score: dict[str,int] = {}
+    my_top_score = 0
     super_attacks: dict[str,list[Explosion|Particle]] = {}
     new_supers: list[Explosion|Particle] = []
 
@@ -36,7 +37,7 @@ class Gamestate:
         """
         gamestate = Gamestate.player.serialize()
         gamestate['name'] = App.config('name')
-        gamestate['score'] = Gamestate.score[App.config('name')]
+        gamestate['score'] = Gamestate.my_top_score
         supers = [s.serialize() for s in Gamestate.new_supers]
         gamestate['supers'] = supers
         Gamestate.new_supers = []
@@ -58,6 +59,7 @@ class Gamestate:
         """
         logger.debug('Scene.update: processing %s network updates', len(update))
         for ruuid, values in update.items():
+            logger.info(values)
             if ruuid == str(Gamestate.player.uuid):
                 continue
             elif ruuid == 'offset':
@@ -66,6 +68,7 @@ class Gamestate:
             uuid_found = False
             if 'score' in values:
                 Gamestate.score[values['name']] = values['score']
+                logger.info(Gamestate.score)
             for sprite in Gamestate.ghosts:
                 if str(sprite.uuid) == ruuid:
                     uuid_found = True

@@ -344,7 +344,16 @@ class Scene:
             except AttributeError:
                 self.check_attacks(particle, Gamestate.player.attacks.power, Gamestate.enemies)
 
-        self.scoreboard.update_scores(Gamestate.score)
+        if Gamestate.my_top_score < Gamestate.score[App.config('name')]:
+            scores = {App.config('name'): Gamestate.score[App.config('name')]}
+        else:
+            scores = {'Top Score': Gamestate.my_top_score,
+                        App.config('name'): Gamestate.score[App.config('name')]}
+
+        for k,v in Gamestate.score.items():
+            if k != App.config('name'):
+                scores[k] = v
+        self.scoreboard.update_scores(scores)
         for e in Gamestate.enemies:
             e.update(dt)
             if not self.bounds.colliderect(e.rect):
@@ -428,6 +437,8 @@ class Scene:
                 if h.current_hp <= 0:
                     h.kill()
                     Gamestate.score[App.config('name')] += h.max_hp
+                    if Gamestate.my_top_score < Gamestate.score[App.config('name')]:
+                        Gamestate.my_top_score = Gamestate.score[App.config('name')]
                     self.dead_sprites.add(h)
             elif isinstance(h, Player):
                 self.damage_player(attack_pwr,attack.rect.center)
