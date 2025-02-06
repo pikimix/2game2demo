@@ -59,10 +59,14 @@ pg.font.init()
 # Now the game is initialised, load configs
 if args.config:
     App.load(args.config)
-if App.config('font') is None:
+if App.config('font30') is None:
     # If theres no config file, set some defaults
-    logger.debug('No font loaded, loading Futura')
-    App.set('font', pg.font.SysFont('Futura', 30))
+    logger.debug('No font30 loaded, loading Futura')
+    App.set('font30', pg.font.SysFont('Futura', 30))
+if App.config('font18') is None:
+    # If theres no config file, set some defaults
+    logger.debug('No font18 loaded, loading Futura')
+    App.set('font18', pg.font.SysFont('Futura', 18))
 
 _screen = pg.display.set_mode((1280, 720))
 

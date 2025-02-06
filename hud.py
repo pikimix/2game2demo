@@ -53,7 +53,7 @@ class Text(Sprite):
         """
         super().__init__()
         self.rect = rect
-        self.image = App.config('font').render(text, True, (0, 0, 0))
+        self.image = App.config('font30').render(text, True, (0, 0, 0))
 
     def update_text(self, text: str):
         """Update the text rendered to screen
@@ -63,7 +63,7 @@ class Text(Sprite):
         text : str
             Text to render to screen
         """
-        self.image = App.config('font').render(text, True, (0, 0, 0))
+        self.image = App.config('font30').render(text, True, (0, 0, 0))
 
 class Scoreboard(Sprite):
     """Scoreboard that tracks multiple lines of text
@@ -96,12 +96,12 @@ class Scoreboard(Sprite):
         # Create a new list of surfaces for each line
         lines: list[pg.Surface] = []
         # Render the scorboard header
-        lines.append(App.config('font').render('Scores', True, 'Black'))
+        lines.append(App.config('font30').render('Scores', True, 'Black'))
         # Keep track of the longest line while we loop through all scores
         max_length = lines[0].get_width()
         for name, score in scores.items():
             # Render the new line, check its length and append to the list of lines
-            line = App.config('font').render(f'{name}: {score}', True, 'Black')
+            line = App.config('font30').render(f'{name}: {score}', True, 'Black')
             max_length = max(max_length, line.get_width())
             lines.append(line)
         # get the height of a line and create a big enough surface to render all lines

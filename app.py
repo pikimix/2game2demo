@@ -18,7 +18,9 @@ class App:
     """
     __conf = {
         'name': 'Player',
-        'font': None, # Font needs to be initialised before this is set
+        'font30': None, # Font needs to be initialised before this is set
+        # default font is set in main as pg.font.SysFont('Futura', 30)
+        'font18': None, # Font needs to be initialised before this is set
         # default font is set in main as pg.font.SysFont('Futura', 30)
         'url' : None,
         'port' : 8080
@@ -72,9 +74,10 @@ class App:
                 yml: dict = yaml.safe_load(f)
                 for k, v in yml.items():
                     match k:
-                        case 'font':
-                            App.set('font', pg.font.SysFont(v, 30))
+                        case f if k in ['font18', 'font30']:
+                            App.set(k, pg.font.SysFont(v, int(k[-2:])))
                         case _:
                             App.set(k, v)
+                logger.critical(App.__conf)
         except FileNotFoundError:
             logger.error('App.load: %s not found.', filepath)
