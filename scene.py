@@ -522,7 +522,9 @@ class Scene:
         self.all_sprites.draw(screen)
         for p in Gamestate.player.particles:
             p.draw(screen)
-        self.hud.draw(screen)
+        for g in Gamestate.ghosts:
+            g.draw_nameplate(screen)
         for s in Gamestate.super_attacks.values():
             for p in s:
                 p.draw(screen)
+        self.hud.draw(screen)
