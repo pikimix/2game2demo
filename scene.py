@@ -295,7 +295,7 @@ class Scene:
             if super_charge > 1:
                 super_charge = 1
                 keys = pg.key.get_pressed()
-                if keys[pg.K_SPACE]: # pylint: disable=no-member
+                if keys[pg.K_SPACE] or Gamestate.player.joystick.get_button(0): # pylint: disable=no-member
                     new_super = Gamestate.player.super_attack(ticks)
                     Gamestate.new_supers.append(new_super)
                     if Gamestate.player.uuid in Gamestate.super_attacks:

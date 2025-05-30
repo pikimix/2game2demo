@@ -314,6 +314,12 @@ class Player(Entity):
                                                                 pg.Vector2(0,0),
                                                                 pg.Color('Red')),
                                     max_velocity=0, interval=5000)
+        pg.joystick.init()
+        self.joystick = None
+        js = [pg.joystick.Joystick(x) for x in range(pg.joystick.get_count())]
+        if js:
+            self.joystick = js[0]
+
 
     def attack(self, target: pg.Vector2, ticks: int):
         """Create a new particle for the players "Attack"
@@ -395,19 +401,35 @@ class Player(Entity):
         # keyboard movement is used
         target_velocity = pg.Vector2(0, 0)
         # Depending on the keys pressed, change the target velocity
-        if keys[pg.K_w]:# pylint: disable=no-member
+        if keys[pg.K_w] or self.joystick.get_button(11):# pylint: disable=no-member
             target_velocity.y += -1
-        if keys[pg.K_s]:# pylint: disable=no-member
+        if keys[pg.K_s] or self.joystick.get_button(12):# pylint: disable=no-member
             target_velocity.y += 1
-        if keys[pg.K_a]:# pylint: disable=no-member
+        if keys[pg.K_a] or self.joystick.get_button(13):# pylint: disable=no-member
             target_velocity.x += -1
-        if keys[pg.K_d]:# pylint: disable=no-member
+        if keys[pg.K_d] or self.joystick.get_button(14):# pylint: disable=no-member
             target_velocity.x += 1
 
-        # If the magnatute of the velocity is > 0, we need to move
+        # Check if a joystick is connected/ used and change target velocity to match the stick
+        # flag if we use stick as it doesnt need normalising
+        stick_move = False
+        if self.joystick is not None:
+            if (abs(self.joystick.get_axis(0)) > App.config('deadzone') or
+                abs(self.joystick.get_axis(1)) > App.config('deadzone')):
+                stick_move = True
+                target_velocity.x = self.joystick.get_axis(0)
+                target_velocity.y = self.joystick.get_axis(1)
+            logger.error('controller x: %s', target_velocity.x)
+            logger.error('controller y: %s', target_velocity.y)
+            logger.error('')
+        # If we are not using a controller, and  the magnatute of the velocity is > 0,
+        # we need to move
         if target_velocity.length() > 0:
             self.click_move = False
-            self.velocity = target_velocity.normalize() * self.max_velocity
+            if stick_move:
+                self.velocity = target_velocity * self.max_velocity
+            else:
+                self.velocity = target_velocity.normalize() * self.max_velocity
             self.rect.move_ip(self.velocity * dt)
         # Keyboard takes priority, but check after if mouse movement has been used
         elif self.click_move:

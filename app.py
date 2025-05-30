@@ -23,7 +23,8 @@ class App:
         'font18': None, # Font needs to be initialised before this is set
         # default font is set in main as pg.font.SysFont('Futura', 30)
         'url' : None,
-        'port' : 8080
+        'port' : 8080,
+        'deadzone' : 0.15
     }
 
     @staticmethod
