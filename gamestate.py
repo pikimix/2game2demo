@@ -6,6 +6,7 @@ import time
 from pygame.sprite import Group
 import pygame as pg
 from app import App
+from controller import Controller
 from entity import Enemy, Entity, Ghost, Player
 from particle import Explosion, Particle
 
@@ -26,6 +27,7 @@ class Gamestate:
     my_top_score = 0
     super_attacks: dict[str,list[Explosion|Particle]] = {}
     new_supers: list[Explosion|Particle] = []
+    controller = Controller()
 
     @staticmethod
     def serialize() -> dict:
@@ -43,6 +45,17 @@ class Gamestate:
         Gamestate.new_supers = []
         return gamestate
 
+    @staticmethod
+    def handle_input():
+        return Gamestate.controller.handle_input()
+    
+    @staticmethod
+    def attack_triggered():
+        keys = pg.key.get_pressed()
+        if keys[pg.K_SPACE]: #or (Gamestate.controller is not None 
+                            #    and Gamestate.player.joystick.get_button(0)):
+            return True
+        return False
     @staticmethod
     def update_net(update: dict):
         """Update current gamestate based on update provided from the network

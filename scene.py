@@ -289,13 +289,12 @@ class Scene:
                 if enemy is not None:
                     Gamestate.player.attack(pg.Vector2(enemy.rect.center), ticks)
 
-            Gamestate.player.update(self.bounds, dt)
+            Gamestate.player.update(Gamestate.handle_input(), self.bounds, dt)
             # Check if the player can/ has triggered super
             super_charge = (ticks - Gamestate.player.last_super)/  Gamestate.player.super_ability.interval
             if super_charge > 1:
                 super_charge = 1
-                keys = pg.key.get_pressed()
-                if keys[pg.K_SPACE] or Gamestate.player.joystick.get_button(0): # pylint: disable=no-member
+                if Gamestate.attack_triggered(): # pylint: disable=no-member
                     new_super = Gamestate.player.super_attack(ticks)
                     Gamestate.new_supers.append(new_super)
                     if Gamestate.player.uuid in Gamestate.super_attacks:
