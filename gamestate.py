@@ -51,11 +51,7 @@ class Gamestate:
     
     @staticmethod
     def attack_triggered():
-        keys = pg.key.get_pressed()
-        if keys[pg.K_SPACE]: #or (Gamestate.controller is not None 
-                            #    and Gamestate.player.joystick.get_button(0)):
-            return True
-        return False
+        return Gamestate.controller.attack_triggered
     @staticmethod
     def update_net(update: dict):
         """Update current gamestate based on update provided from the network
