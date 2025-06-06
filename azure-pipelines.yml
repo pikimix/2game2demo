@@ -6,8 +6,7 @@
 trigger:
 - main
 
-pool:
-  vmImage: HomeLab
+pool: HomeLab
 
 steps:
 - script: echo Hello, world!
