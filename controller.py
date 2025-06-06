@@ -14,12 +14,20 @@ class Controller:
             self.joystick = js[0]
         self.click_move:bool = False
         self.click_target = None
+        self.attack_triggered = False
 
     def handle_input(self):
         """Handle input and move
         """
         # Get keys pressed
         keys = pg.key.get_pressed()
+
+        # Check if we have triggered an attack and sett he flag.
+        if keys[pg.K_SPACE] or (self.joystick is not None
+                                and self.joystick.get_button(App.config('super'))):
+            self.attack_triggered =  True
+        else:
+            self.attack_triggered =  False
 
         # First check if the player has clicked a location
         mouse = pg.mouse.get_pressed(num_buttons=3)
