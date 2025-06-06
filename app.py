@@ -24,7 +24,9 @@ class App:
         # default font is set in main as pg.font.SysFont('Futura', 30)
         'url' : None,
         'port' : 8080,
-        'deadzone' : 0.15
+        # Defaults for controller
+        'deadzone' : 0.15,
+        'super' : 1
     }
 
     @staticmethod
